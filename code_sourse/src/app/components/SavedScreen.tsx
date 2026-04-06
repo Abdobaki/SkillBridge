@@ -24,7 +24,7 @@ export function SavedScreen({
   const [activeTab, setActiveTab] = useState('jobs');
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="flex-1 min-h-0 flex flex-col bg-background">
       {/* Header */}
       <div className="px-6 pt-12 pb-4 bg-card border-b border-border">
         <h2 className="text-2xl text-foreground mb-4">Saved Items</h2>

@@ -10,11 +10,12 @@ interface CourseDetailScreenProps {
 }
 
 export function CourseDetailScreen({ course, onBack }: CourseDetailScreenProps) {
-  const enrollmentPercentage = (course.enrolled / course.maxEnrollment) * 100;
-  const spotsLeft = course.maxEnrollment - course.enrolled;
+  const enrollmentPercentage = Math.min((course.enrolled / course.minEnrollment) * 100, 100);
+  const hasMetMinimum = course.enrolled >= course.minEnrollment;
+  const spotsNeeded = course.minEnrollment - course.enrolled;
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="flex-1 min-h-0 flex flex-col bg-background">
       {/* Header */}
       <div className="px-6 pt-12 pb-4 bg-card border-b border-border">
         <button onClick={onBack} className="p-2 -ml-2 mb-4">
@@ -69,25 +70,25 @@ export function CourseDetailScreen({ course, onBack }: CourseDetailScreenProps) 
                 <span className="text-foreground">Enrollment Status</span>
               </div>
               <span className="text-sm text-muted-foreground">
-                {course.enrolled} / {course.maxEnrollment}
+                {course.enrolled} enrolled (min {course.minEnrollment})
               </span>
             </div>
 
             <Progress value={enrollmentPercentage} className="mb-3" />
 
             <div className="flex items-center gap-2 text-sm">
-              {spotsLeft > 5 ? (
+              {hasMetMinimum ? (
                 <>
                   <TrendingUp className="w-4 h-4 text-accent" />
-                  <span className="text-muted-foreground">
-                    {spotsLeft} spots remaining
+                  <span className="text-accent">
+                    Minimum enrollment met! Course is confirmed.
                   </span>
                 </>
               ) : (
                 <>
                   <Clock className="w-4 h-4 text-accent-orange" />
                   <span className="text-accent-orange">
-                    Only {spotsLeft} spots left!
+                    {spotsNeeded} more student{spotsNeeded > 1 ? 's' : ''} needed to start
                   </span>
                 </>
               )}
@@ -132,11 +133,11 @@ export function CourseDetailScreen({ course, onBack }: CourseDetailScreenProps) 
           </div>
 
           {/* Course Activation Notice */}
-          {enrollmentPercentage < 50 && (
+          {!hasMetMinimum && (
             <div className="bg-primary/5 rounded-2xl p-5 border border-primary/20">
               <h4 className="text-foreground mb-2">Course Start Notice</h4>
               <p className="text-sm text-muted-foreground">
-                This course will start once the minimum enrollment is reached. 
+                This course will start once the minimum enrollment of {course.minEnrollment} students is reached. 
                 Join now to secure your spot and receive updates.
               </p>
             </div>

@@ -11,27 +11,32 @@ import {
   XCircle,
   AlertCircle,
   Search,
+  PlusCircle,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { CourseProposal } from '../types';
+import { CourseProposal, Enrollment } from '../types';
 
 interface TrainerDashboardProps {
   trainerName: string;
   trainerEmail: string;
   proposals: CourseProposal[];
+  enrollments?: Enrollment[];
   onBack: () => void;
   onViewProposals: () => void;
   onBrowseJobs?: () => void;
+  onPostJob?: () => void;
 }
 
 export function TrainerDashboard({
   trainerName,
   trainerEmail,
   proposals,
+  enrollments,
   onBack,
   onViewProposals,
   onBrowseJobs,
+  onPostJob,
 }: TrainerDashboardProps) {
   const [activeSection, setActiveSection] = useState('overview');
 
@@ -41,7 +46,7 @@ export function TrainerDashboard({
   const rejectedProposals = proposals.filter((p) => p.status === 'rejected').length;
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="flex-1 min-h-0 flex flex-col bg-background">
       {/* Header */}
       <div className="px-6 pt-12 pb-4 bg-primary">
         <button onClick={onBack} className="p-2 -ml-2 mb-4">
@@ -166,7 +171,7 @@ export function TrainerDashboard({
                         <span>{proposal.duration}</span>
                         <span>•</span>
                         <span>
-                          {proposal.minStudents}-{proposal.maxStudents} students
+                          min {proposal.minStudents} students
                         </span>
                       </div>
                     </div>
@@ -207,6 +212,21 @@ export function TrainerDashboard({
                     </p>
                   </div>
                 </Button>
+                {onPostJob && (
+                  <Button
+                    variant="outline"
+                    onClick={onPostJob}
+                    className="justify-start h-auto py-4 border-primary text-primary hover:bg-primary/10"
+                  >
+                    <PlusCircle className="w-5 h-5 mr-3" />
+                    <div className="text-left">
+                      <p className="text-foreground">Post a Job Announcement</p>
+                      <p className="text-xs text-muted-foreground">
+                        Share job opportunities with the community
+                      </p>
+                    </div>
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -280,7 +300,7 @@ export function TrainerDashboard({
                     <div>
                       <p className="text-muted-foreground mb-1">Enrollment</p>
                       <p className="text-foreground">
-                        {proposal.minStudents}-{proposal.maxStudents} students
+                        min {proposal.minStudents} students
                       </p>
                     </div>
                   </div>

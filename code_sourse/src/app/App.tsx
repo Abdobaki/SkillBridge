@@ -17,8 +17,10 @@ import { TrainerPendingApprovalScreen } from './components/TrainerPendingApprova
 import { TrainerDashboard } from './components/TrainerDashboard';
 import { AdminApprovalScreen } from './components/AdminApprovalScreen';
 import { AdminTrainerApprovalScreen } from './components/AdminTrainerApprovalScreen';
+import { AdminJobApprovalScreen } from './components/AdminJobApprovalScreen';
 import { CourseProposalForm } from './components/CourseProposalForm';
 import { TrainerJobBrowseScreen } from './components/TrainerJobBrowseScreen';
+import { PostJobForm } from './components/PostJobForm';
 import { BottomNav } from './components/BottomNav';
 import { mockJobAnnouncements, mockCourses, mockCourseProposals, mockEnrollments, mockTrainerApplications } from './mockData';
 import { UserType, UserRole, JobAnnouncement, Course, CourseProposal, Enrollment, TrainerApplication, TrainerStatus } from './types';
@@ -42,7 +44,9 @@ type Screen =
   | 'trainer-browse-jobs'
   | 'admin-approval'
   | 'admin-trainer-approval'
-  | 'propose-course';
+  | 'admin-job-approval'
+  | 'propose-course'
+  | 'post-job';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('onboarding');
@@ -55,9 +59,13 @@ export default function App() {
   const [savedItems, setSavedItems] = useState<string[]>([]);
   const [selectedJob, setSelectedJob] = useState<JobAnnouncement | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [jobAnnouncements, setJobAnnouncements] = useState<JobAnnouncement[]>(mockJobAnnouncements);
   const [courseProposals, setCourseProposals] = useState<CourseProposal[]>(mockCourseProposals);
   const [enrollments, setEnrollments] = useState<Enrollment[]>(mockEnrollments);
   const [trainerApplications, setTrainerApplications] = useState<TrainerApplication[]>(mockTrainerApplications);
+
+  // Only show approved jobs to regular users and trainers
+  const approvedJobs = jobAnnouncements.filter(j => j.postStatus === 'approved');
 
   const handleOnboardingComplete = () => {
     setCurrentScreen('role-selection');
@@ -72,12 +80,19 @@ export default function App() {
     }
   };
 
-  const handleLoginComplete = (userData: { name: string; email: string }) => {
+  const handleLoginComplete = (userData: { name: string; email: string; role?: UserRole }) => {
     setUserName(userData.name);
     setUserEmail(userData.email);
     
+    // If role is provided from login screen, set it
+    if (userData.role) {
+      setUserRole(userData.role);
+    }
+    
+    const activeRole = userData.role || userRole;
+    
     // Navigate based on role and trainer status
-    if (userRole === 'trainer') {
+    if (activeRole === 'trainer') {
       // Check if trainer application exists and is approved
       const application = trainerApplications.find(app => app.email === userData.email);
       if (application) {
@@ -91,7 +106,7 @@ export default function App() {
       } else {
         setCurrentScreen('trainer-application');
       }
-    } else if (userRole === 'admin') {
+    } else if (activeRole === 'admin') {
       setCurrentScreen('admin-trainer-approval');
     } else {
       setCurrentScreen('home');
@@ -99,8 +114,9 @@ export default function App() {
   };
 
   const handleSaveToggle = (id: string, type: 'job' | 'course') => {
+    const prefixedId = `${type}:${id}`;
     setSavedItems((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(prefixedId) ? prev.filter((item) => item !== prefixedId) : [...prev, prefixedId]
     );
   };
 
@@ -144,11 +160,47 @@ export default function App() {
     setCurrentScreen('subscription');
   };
 
-  const savedJobs = mockJobAnnouncements.filter((job) =>
-    savedItems.includes(job.id)
+  const handlePostJob = (job: JobAnnouncement) => {
+    setJobAnnouncements([...jobAnnouncements, job]);
+    if (job.postStatus === 'approved') {
+      toast.success('Job announcement published successfully!');
+    } else {
+      toast.success('Job announcement submitted for admin review!');
+    }
+    // Navigate back to previous screen
+    if (userRole === 'trainer') {
+      setCurrentScreen('trainer-dashboard');
+    } else if (userRole === 'admin') {
+      setCurrentScreen('admin-trainer-approval');
+    } else {
+      setCurrentScreen('home');
+      setActiveTab('home');
+    }
+  };
+
+  const handleApproveJob = (jobId: string) => {
+    setJobAnnouncements(
+      jobAnnouncements.map((j) =>
+        j.id === jobId ? { ...j, postStatus: 'approved' as const, verified: true } : j
+      )
+    );
+    toast.success('Job announcement approved and published!');
+  };
+
+  const handleRejectJob = (jobId: string, feedback: string) => {
+    setJobAnnouncements(
+      jobAnnouncements.map((j) =>
+        j.id === jobId ? { ...j, postStatus: 'rejected' as const, adminFeedback: feedback } : j
+      )
+    );
+    toast.info('Job announcement rejected with feedback sent to poster.');
+  };
+
+  const savedJobs = approvedJobs.filter((job) =>
+    savedItems.includes(`job:${job.id}`)
   );
   const savedCourses = mockCourses.filter((course) =>
-    savedItems.includes(course.id)
+    savedItems.includes(`course:${course.id}`)
   );
 
   const renderScreen = () => {
@@ -191,7 +243,7 @@ export default function App() {
             <HomeScreen
               userName={userName}
               userType={userType}
-              featuredJobs={mockJobAnnouncements.slice(0, 3)}
+              featuredJobs={approvedJobs.slice(0, 3)}
               recommendedCourses={mockCourses.slice(0, 2)}
               onJobClick={handleJobClick}
               onCourseClick={handleCourseClick}
@@ -200,6 +252,11 @@ export default function App() {
                 setCurrentScreen('explore');
               }}
               onUpgradeClick={handleUpgradeClick}
+              onPostJob={() => setCurrentScreen('post-job')}
+              onSeeAllJobs={() => {
+                setActiveTab('explore');
+                setCurrentScreen('explore');
+              }}
             />
             <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
           </>
@@ -209,7 +266,7 @@ export default function App() {
         return (
           <>
             <ExploreScreen
-              jobs={mockJobAnnouncements}
+              jobs={approvedJobs}
               courses={mockCourses}
               onJobClick={handleJobClick}
               onCourseClick={handleCourseClick}
@@ -226,6 +283,8 @@ export default function App() {
             <CoursesScreen
               courses={mockCourses}
               onCourseClick={handleCourseClick}
+              onSaveToggle={handleSaveToggle}
+              savedItems={savedItems}
             />
             <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
           </>
@@ -319,11 +378,8 @@ export default function App() {
             onViewProposals={() => {
               // Could navigate to a detailed proposals screen
             }}
-            onViewEnrollments={() => {
-              // Could navigate to a detailed enrollments screen
-            }}
-            onViewEarnings={() => {
-              // Could navigate to a detailed earnings screen
+            onPostJob={() => {
+              setCurrentScreen('post-job');
             }}
           />
         );
@@ -359,8 +415,9 @@ export default function App() {
           <AdminTrainerApprovalScreen
             applications={trainerApplications}
             onBack={() => {
-              setCurrentScreen('onboarding');
+              // no-op — admin stays on dashboard, use logout to leave
             }}
+            onLogout={handleLogout}
             onApprove={(applicationId) => {
               setTrainerApplications(
                 trainerApplications.map((app) =>
@@ -377,6 +434,27 @@ export default function App() {
               );
               toast.info('Trainer application rejected with feedback sent to trainer.');
             }}
+            onNavigateToCourseApproval={() => {
+              setCurrentScreen('admin-approval');
+            }}
+            onNavigateToJobApproval={() => {
+              setCurrentScreen('admin-job-approval');
+            }}
+            onPostJob={() => {
+              setCurrentScreen('post-job');
+            }}
+          />
+        );
+
+      case 'admin-job-approval':
+        return (
+          <AdminJobApprovalScreen
+            jobs={jobAnnouncements}
+            onBack={() => {
+              setCurrentScreen('admin-trainer-approval');
+            }}
+            onApprove={handleApproveJob}
+            onReject={handleRejectJob}
           />
         );
 
@@ -400,7 +478,7 @@ export default function App() {
       case 'trainer-browse-jobs':
         return (
           <TrainerJobBrowseScreen
-            jobs={mockJobAnnouncements}
+            jobs={approvedJobs}
             onJobClick={handleJobClick}
             onBack={() => {
               setCurrentScreen('trainer-dashboard');
@@ -433,6 +511,26 @@ export default function App() {
             onBack={() => {
               handleLogout();
             }}
+          />
+        );
+
+      case 'post-job':
+        return (
+          <PostJobForm
+            userRole={userRole}
+            userName={userName}
+            userEmail={userEmail}
+            onClose={() => {
+              if (userRole === 'trainer') {
+                setCurrentScreen('trainer-dashboard');
+              } else if (userRole === 'admin') {
+                setCurrentScreen('admin-trainer-approval');
+              } else {
+                setCurrentScreen('home');
+                setActiveTab('home');
+              }
+            }}
+            onSubmit={handlePostJob}
           />
         );
 

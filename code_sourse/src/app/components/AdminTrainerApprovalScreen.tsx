@@ -12,6 +12,9 @@ import {
   Briefcase,
   FileText,
   Download,
+  BookOpen,
+  PlusCircle,
+  LogOut,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -23,6 +26,10 @@ interface AdminTrainerApprovalScreenProps {
   onBack: () => void;
   onApprove: (applicationId: string) => void;
   onReject: (applicationId: string, feedback: string) => void;
+  onNavigateToCourseApproval?: () => void;
+  onNavigateToJobApproval?: () => void;
+  onPostJob?: () => void;
+  onLogout?: () => void;
 }
 
 export function AdminTrainerApprovalScreen({
@@ -30,6 +37,10 @@ export function AdminTrainerApprovalScreen({
   onBack,
   onApprove,
   onReject,
+  onNavigateToCourseApproval,
+  onNavigateToJobApproval,
+  onPostJob,
+  onLogout,
 }: AdminTrainerApprovalScreenProps) {
   const [selectedApplication, setSelectedApplication] = useState<TrainerApplication | null>(null);
   const [rejectionFeedback, setRejectionFeedback] = useState('');
@@ -54,14 +65,21 @@ export function AdminTrainerApprovalScreen({
   };
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="flex-1 min-h-0 flex flex-col bg-background">
       {/* Header */}
       <div className="px-6 pt-12 pb-4 bg-card border-b border-border">
-        <button onClick={onBack} className="p-2 -ml-2 mb-4">
-          <ArrowLeft className="w-6 h-6 text-foreground" />
-        </button>
-        <h1 className="text-2xl text-foreground mb-2">Trainer Applications</h1>
-        <p className="text-sm text-muted-foreground">Review and approve trainer applications</p>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-2xl text-foreground">Admin Dashboard</h1>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="p-2 rounded-lg hover:bg-destructive/10 transition-colors"
+            >
+              <LogOut className="w-5 h-5 text-destructive" />
+            </button>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground">Manage trainer applications & approvals</p>
       </div>
 
       {/* Stats */}
@@ -80,6 +98,43 @@ export function AdminTrainerApprovalScreen({
             <p className="text-xs text-muted-foreground">Rejected</p>
           </div>
         </div>
+      </div>
+
+      {/* Admin Navigation */}
+      <div className="px-6 py-3 bg-card border-b border-border flex gap-2 overflow-x-auto">
+        {onNavigateToCourseApproval && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onNavigateToCourseApproval}
+            className="shrink-0"
+          >
+            <BookOpen className="w-4 h-4 mr-2" />
+            Course Approvals
+          </Button>
+        )}
+        {onNavigateToJobApproval && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onNavigateToJobApproval}
+            className="shrink-0"
+          >
+            <Briefcase className="w-4 h-4 mr-2" />
+            Job Approvals
+          </Button>
+        )}
+        {onPostJob && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onPostJob}
+            className="shrink-0"
+          >
+            <PlusCircle className="w-4 h-4 mr-2" />
+            Post Job
+          </Button>
+        )}
       </div>
 
       {/* Content */}

@@ -1,4 +1,4 @@
-import { Bell, Crown, MapPin, Briefcase, Lock, ChevronRight } from 'lucide-react';
+import { Bell, Crown, MapPin, Briefcase, Lock, ChevronRight, PlusCircle } from 'lucide-react';
 import { UserType, JobAnnouncement, Course } from '../types';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -14,6 +14,8 @@ interface HomeScreenProps {
   onCourseClick: (course: Course) => void;
   onCategoryClick: (category: string) => void;
   onUpgradeClick: () => void;
+  onPostJob?: () => void;
+  onSeeAllJobs?: () => void;
 }
 
 export function HomeScreen({
@@ -25,6 +27,8 @@ export function HomeScreen({
   onCourseClick,
   onCategoryClick,
   onUpgradeClick,
+  onPostJob,
+  onSeeAllJobs,
 }: HomeScreenProps) {
   const greeting = () => {
     const hour = new Date().getHours();
@@ -68,11 +72,29 @@ export function HomeScreen({
         </div>
       </div>
 
+      {/* Post a Job CTA */}
+      {onPostJob && (
+        <div className="px-6 mt-4">
+          <button
+            onClick={onPostJob}
+            className="w-full bg-gradient-to-r from-accent to-primary rounded-2xl p-4 flex items-center gap-3 hover:opacity-90 transition-opacity"
+          >
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+              <PlusCircle className="w-5 h-5 text-white" />
+            </div>
+            <div className="text-left">
+              <p className="text-white font-medium">Post a Job Announcement</p>
+              <p className="text-white/70 text-xs">Share opportunities with the community</p>
+            </div>
+          </button>
+        </div>
+      )}
+
       {/* Featured Announcements */}
       <div className="px-6 mt-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-foreground">Featured Jobs</h3>
-          <button className="text-primary text-sm">See All</button>
+          <button onClick={onSeeAllJobs} className="text-primary text-sm">See All</button>
         </div>
 
         <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 scrollbar-hide">
@@ -163,7 +185,7 @@ export function HomeScreen({
                 <div className="flex items-center justify-between">
                   <span className="text-primary">€{course.price}</span>
                   <div className="text-xs text-muted-foreground">
-                    {course.enrolled}/{course.maxEnrollment} enrolled
+                    {course.enrolled} enrolled (min {course.minEnrollment})
                   </div>
                 </div>
 
@@ -173,7 +195,7 @@ export function HomeScreen({
                     <div
                       className="h-full bg-accent rounded-full transition-all"
                       style={{
-                        width: `${(course.enrolled / course.maxEnrollment) * 100}%`,
+                        width: `${Math.min((course.enrolled / course.minEnrollment) * 100, 100)}%`,
                       }}
                     />
                   </div>

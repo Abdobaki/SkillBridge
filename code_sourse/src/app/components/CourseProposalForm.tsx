@@ -31,7 +31,6 @@ export function CourseProposalForm({
     deliveryMode: 'online' as DeliveryMode,
     basePrice: '',
     minStudents: '',
-    maxStudents: '',
     startDate: '',
     instructorBio: '',
   });
@@ -56,7 +55,7 @@ export function CourseProposalForm({
       platformCommission: commission,
       finalPrice: finalPrice,
       minStudents: parseInt(formData.minStudents),
-      maxStudents: parseInt(formData.maxStudents),
+      maxStudents: parseInt(formData.minStudents),
       startDate: formData.startDate,
       instructorBio: formData.instructorBio,
       relatedJobId: job.id,
@@ -204,32 +203,21 @@ export function CourseProposalForm({
               )}
             </div>
 
-            {/* Student Numbers */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="minStudents">Minimum Students *</Label>
-                <Input
-                  id="minStudents"
-                  type="number"
-                  value={formData.minStudents}
-                  onChange={(e) => setFormData({ ...formData, minStudents: e.target.value })}
-                  placeholder="10"
-                  required
-                  className="mt-2"
-                />
-              </div>
-              <div>
-                <Label htmlFor="maxStudents">Maximum Students *</Label>
-                <Input
-                  id="maxStudents"
-                  type="number"
-                  value={formData.maxStudents}
-                  onChange={(e) => setFormData({ ...formData, maxStudents: e.target.value })}
-                  placeholder="30"
-                  required
-                  className="mt-2"
-                />
-              </div>
+            {/* Minimum Students */}
+            <div>
+              <Label htmlFor="minStudents">Minimum Students *</Label>
+              <Input
+                id="minStudents"
+                type="number"
+                value={formData.minStudents}
+                onChange={(e) => setFormData({ ...formData, minStudents: e.target.value })}
+                placeholder="10"
+                required
+                className="mt-2"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Course will start once this number of students enroll
+              </p>
             </div>
 
             {/* Start Date */}

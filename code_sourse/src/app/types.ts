@@ -3,6 +3,7 @@ export type UserRole = 'user' | 'trainer' | 'admin';
 export type CourseStatus = 'pending' | 'approved' | 'rejected' | 'active';
 export type DeliveryMode = 'online' | 'hybrid' | 'onsite';
 export type TrainerStatus = 'pending' | 'approved' | 'rejected';
+export type JobPostStatus = 'pending' | 'approved' | 'rejected';
 
 export interface User {
   id: string;
@@ -33,6 +34,11 @@ export interface JobAnnouncement {
   posted: string;
   verified: boolean;
   logo?: string;
+  postStatus: JobPostStatus;
+  postedByRole: UserRole;
+  postedByName: string;
+  postedByEmail: string;
+  adminFeedback?: string;
 }
 
 export interface Course {
@@ -43,7 +49,6 @@ export interface Course {
   instructorImage?: string;
   price: number;
   enrolled: number;
-  maxEnrollment: number;
   thumbnail?: string;
   description: string;
   duration: string;
@@ -51,7 +56,7 @@ export interface Course {
   verified: boolean;
   relatedJobId?: string;
   status?: CourseStatus;
-  minEnrollment?: number;
+  minEnrollment: number;
 }
 
 export interface CourseProposal {

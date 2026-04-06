@@ -28,7 +28,7 @@ export function JobDetailScreen({
   const isTrainer = userRole === 'trainer';
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="flex-1 min-h-0 flex flex-col bg-background">
       {/* Header */}
       <div className="px-6 pt-12 pb-4 bg-card border-b border-border">
         <button onClick={onBack} className="p-2 -ml-2 mb-4">
@@ -160,7 +160,7 @@ export function JobDetailScreen({
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Users className="w-4 h-4" />
-                        <span>{course.enrolled}/{course.maxEnrollment}</span>
+                        <span>{course.enrolled} (min {course.minEnrollment})</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />

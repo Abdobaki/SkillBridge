@@ -36,22 +36,10 @@ export function RoleSelectionScreen({ onBack, onSelectRole }: RoleSelectionScree
         'Track earnings and performance',
       ],
     },
-    {
-      id: 'admin' as UserRole,
-      title: 'Platform Administrator',
-      icon: Shield,
-      description: 'Manage platform and approve courses',
-      features: [
-        'Review course proposals',
-        'Approve or reject submissions',
-        'Manage platform content',
-        'Oversee quality standards',
-      ],
-    },
   ];
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="flex-1 min-h-0 flex flex-col bg-background">
       {/* Header */}
       <div className="px-6 pt-12 pb-6 bg-primary">
         <button onClick={onBack} className="p-2 -ml-2 mb-6">

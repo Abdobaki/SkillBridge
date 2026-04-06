@@ -53,7 +53,7 @@ export function AdminApprovalScreen({
   };
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="flex-1 min-h-0 flex flex-col bg-background">
       {/* Header */}
       <div className="px-6 pt-12 pb-4 bg-card border-b border-border">
         <button onClick={onBack} className="p-2 -ml-2 mb-4">
@@ -120,7 +120,7 @@ export function AdminApprovalScreen({
                       <div className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-muted-foreground" />
                         <span className="text-foreground">
-                          {proposal.minStudents}-{proposal.maxStudents}
+                          min {proposal.minStudents}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -263,9 +263,9 @@ export function AdminApprovalScreen({
                   <p className="text-foreground">{selectedProposal.startDate}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Enrollment Range</p>
+                  <p className="text-sm text-muted-foreground mb-1">Min Enrollment</p>
                   <p className="text-foreground">
-                    {selectedProposal.minStudents} - {selectedProposal.maxStudents} students
+                    {selectedProposal.minStudents} students
                   </p>
                 </div>
               </div>

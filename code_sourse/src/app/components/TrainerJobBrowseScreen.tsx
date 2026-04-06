@@ -11,7 +11,7 @@ interface TrainerJobBrowseScreenProps {
 
 export function TrainerJobBrowseScreen({ jobs, onBack, onJobClick }: TrainerJobBrowseScreenProps) {
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="flex-1 min-h-0 flex flex-col bg-background">
       {/* Header */}
       <div className="px-6 pt-12 pb-4 bg-primary">
         <button onClick={onBack} className="p-2 -ml-2 mb-4">

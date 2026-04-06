@@ -16,7 +16,7 @@ export function TrainerPendingApprovalScreen({
   onBack,
 }: TrainerPendingApprovalScreenProps) {
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="flex-1 min-h-0 flex flex-col bg-background">
       {/* Content */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="max-w-md w-full text-center">
