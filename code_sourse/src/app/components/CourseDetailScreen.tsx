@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, User, Users, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
+import { ArrowLeft, BookOpen, User, Users, Clock, CheckCircle2, TrendingUp, Bookmark } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
@@ -7,9 +7,11 @@ import { Course } from '../types';
 interface CourseDetailScreenProps {
   course: Course;
   onBack: () => void;
+  isSaved?: boolean;
+  onSaveToggle?: () => void;
 }
 
-export function CourseDetailScreen({ course, onBack }: CourseDetailScreenProps) {
+export function CourseDetailScreen({ course, onBack, isSaved, onSaveToggle }: CourseDetailScreenProps) {
   const enrollmentPercentage = Math.min((course.enrolled / course.minEnrollment) * 100, 100);
   const hasMetMinimum = course.enrolled >= course.minEnrollment;
   const spotsNeeded = course.minEnrollment - course.enrolled;
@@ -17,10 +19,15 @@ export function CourseDetailScreen({ course, onBack }: CourseDetailScreenProps) 
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-background">
       {/* Header */}
-      <div className="px-6 pt-12 pb-4 bg-card border-b border-border">
+      <div className="px-6 pt-12 pb-4 bg-card border-b border-border flex items-center justify-between">
         <button onClick={onBack} className="p-2 -ml-2 mb-4">
           <ArrowLeft className="w-6 h-6 text-foreground" />
         </button>
+        {onSaveToggle && (
+          <button onClick={onSaveToggle} className="p-2 mb-4 rounded-lg hover:bg-muted transition-colors">
+            <Bookmark className={`w-6 h-6 ${isSaved ? 'fill-primary text-primary' : 'text-foreground'}`} />
+          </button>
+        )}
       </div>
 
       {/* Content */}

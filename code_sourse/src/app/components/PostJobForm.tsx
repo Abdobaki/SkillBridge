@@ -34,8 +34,8 @@ export function PostJobForm({
     applicationDeadline: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
 
     const job: JobAnnouncement = {
       id: `job${Date.now()}`,
@@ -252,6 +252,7 @@ export function PostJobForm({
             Cancel
           </Button>
           <Button
+            type="button"
             onClick={handleSubmit}
             className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
           >

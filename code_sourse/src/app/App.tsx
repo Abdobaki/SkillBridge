@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Toaster, toast } from 'sonner';
 import { MobileContainer } from './components/MobileContainer';
 import { Onboarding } from './components/Onboarding';
@@ -21,9 +21,13 @@ import { AdminJobApprovalScreen } from './components/AdminJobApprovalScreen';
 import { CourseProposalForm } from './components/CourseProposalForm';
 import { TrainerJobBrowseScreen } from './components/TrainerJobBrowseScreen';
 import { PostJobForm } from './components/PostJobForm';
+import { SettingsScreen } from './components/SettingsScreen';
 import { BottomNav } from './components/BottomNav';
-import { mockJobAnnouncements, mockCourses, mockCourseProposals, mockEnrollments, mockTrainerApplications } from './mockData';
 import { UserType, UserRole, JobAnnouncement, Course, CourseProposal, Enrollment, TrainerApplication, TrainerStatus } from './types';
+import { supabase } from '../lib/supabase';
+import {
+  getCurrentUser, fetchJobs, fetchProposals, fetchTrainerApplications, fetchEnrollments, fetchCourses, signOutUser, createJob, updateJobStatus, saveProposal, updateProposalStatus, submitTrainerApplication, updateApplicationStatus, signUpUser, createCourse
+} from '../lib/api';
 
 type Screen =
   | 'onboarding'
@@ -46,7 +50,8 @@ type Screen =
   | 'admin-trainer-approval'
   | 'admin-job-approval'
   | 'propose-course'
-  | 'post-job';
+  | 'post-job'
+  | 'settings';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('onboarding');
@@ -56,16 +61,139 @@ export default function App() {
   const [trainerStatus, setTrainerStatus] = useState<TrainerStatus>('pending');
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
-  const [savedItems, setSavedItems] = useState<string[]>([]);
+  const [userProfession, setUserProfession] = useState('Professional');
+  const [profileImage, setProfileImage] = useState<string | undefined>(undefined);
+  const [exploreCategory, setExploreCategory] = useState<string | null>(null);
+  const [savedItems, setSavedItems] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('savedItems');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('savedItems', JSON.stringify(savedItems));
+    } catch {
+      // ignore
+    }
+  }, [savedItems]);
   const [selectedJob, setSelectedJob] = useState<JobAnnouncement | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [jobAnnouncements, setJobAnnouncements] = useState<JobAnnouncement[]>(mockJobAnnouncements);
-  const [courseProposals, setCourseProposals] = useState<CourseProposal[]>(mockCourseProposals);
-  const [enrollments, setEnrollments] = useState<Enrollment[]>(mockEnrollments);
-  const [trainerApplications, setTrainerApplications] = useState<TrainerApplication[]>(mockTrainerApplications);
+  const [jobAnnouncements, setJobAnnouncements] = useState<JobAnnouncement[]>([]);
+  const [courseProposals, setCourseProposals] = useState<CourseProposal[]>([]);
+  const [editingProposal, setEditingProposal] = useState<CourseProposal | null>(null);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [trainerApplications, setTrainerApplications] = useState<TrainerApplication[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  const currentScreenRef = useRef<Screen>(currentScreen);
+  useEffect(() => {
+    currentScreenRef.current = currentScreen;
+  }, [currentScreen]);
+
+  const trainerApplicationsRef = useRef<TrainerApplication[]>(trainerApplications);
+  useEffect(() => {
+    trainerApplicationsRef.current = trainerApplications;
+  }, [trainerApplications]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadInitialData() {
+      try {
+        const [jobs, proposals, apps, enrolls, dbCourses] = await Promise.all([
+          fetchJobs(), fetchProposals(), fetchTrainerApplications(), fetchEnrollments(), fetchCourses()
+        ]);
+        if (!mounted) return;
+        setJobAnnouncements(jobs);
+        setCourseProposals(proposals);
+        setTrainerApplications(apps);
+        setEnrollments(enrolls);
+        setCourses(dbCourses);
+      } catch (err) {
+        console.error("Failed to load initial data", err);
+      } finally {
+        if (mounted) setIsInitializing(false);
+      }
+    }
+
+    async function handleAuthUser() {
+      const result = await getCurrentUser();
+      if (!mounted) return;
+      if (!result) return;
+      const { profile } = result;
+      if (profile) {
+        setUserName(profile.name || 'User');
+        setUserEmail(profile.email || '');
+        setUserRole((profile.role as UserRole) || 'user');
+        setTrainerStatus((profile.trainerStatus as TrainerStatus) || 'pending');
+        setUserProfession(profile.profession || 'Professional');
+        setProfileImage(profile.profileImage);
+
+        // Auto-navigate past onboarding if logged in (except if already on a deep screen)
+        if (['onboarding', 'login', 'signup', 'role-selection'].includes(currentScreenRef.current)) {
+          let nextScreen: Screen = 'home';
+          if (profile.role === 'admin') {
+            nextScreen = 'admin-trainer-approval';
+          } else if (profile.role === 'trainer') {
+            const application = trainerApplicationsRef.current.find(app => app.email === profile.email);
+            if (application) {
+              if (application.status === 'approved') {
+                nextScreen = 'trainer-dashboard';
+              } else {
+                nextScreen = 'trainer-pending';
+              }
+            } else {
+              // Fallback to profile status if fresh fetch hasn't completed
+              if (profile.trainerStatus === 'approved') nextScreen = 'trainer-dashboard';
+              else if (profile.trainerStatus === 'rejected') nextScreen = 'trainer-pending';
+              else nextScreen = 'trainer-application';
+            }
+          }
+          setCurrentScreen(nextScreen);
+        }
+      }
+    }
+
+    // Subscribe to auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        handleAuthUser();
+      } else {
+        // User logged out
+        setUserName('');
+        setUserEmail('');
+        setUserRole('user');
+        setProfileImage(undefined);
+        setCurrentScreen(prev => {
+           if (['onboarding', 'login', 'signup', 'role-selection'].includes(prev)) {
+             return prev;
+           }
+           return 'onboarding';
+        });
+      }
+    });
+
+    // Run Once
+    loadInitialData();
+    handleAuthUser();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Only show approved jobs to regular users and trainers
   const approvedJobs = jobAnnouncements.filter(j => j.postStatus === 'approved');
+
+  if (isInitializing) {
+    return <div className="flex items-center justify-center h-screen bg-background text-foreground">Loading App Data...</div>;
+  }
 
   const handleOnboardingComplete = () => {
     setCurrentScreen('role-selection');
@@ -81,35 +209,38 @@ export default function App() {
   };
 
   const handleLoginComplete = (userData: { name: string; email: string; role?: UserRole }) => {
+    // Only basic state updates here. The active routing is handled by `handleAuthUser` 
+    // triggered via `onAuthStateChange` to prevent race conditions and duplicate navigations.
     setUserName(userData.name);
     setUserEmail(userData.email);
-    
-    // If role is provided from login screen, set it
     if (userData.role) {
       setUserRole(userData.role);
     }
-    
-    const activeRole = userData.role || userRole;
-    
-    // Navigate based on role and trainer status
-    if (activeRole === 'trainer') {
-      // Check if trainer application exists and is approved
-      const application = trainerApplications.find(app => app.email === userData.email);
-      if (application) {
-        if (application.status === 'approved') {
-          setTrainerStatus('approved');
-          setCurrentScreen('trainer-dashboard');
-        } else {
-          setTrainerStatus(application.status);
-          setCurrentScreen('trainer-pending');
-        }
-      } else {
-        setCurrentScreen('trainer-application');
+  };
+
+  const handleUpdateProfile = async (data: { name: string; profession: string; imageFile?: File }) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user found");
+
+      let imageUrl = profileImage;
+      if (data.imageFile) {
+        imageUrl = await uploadProfileImage(user.id, data.imageFile);
       }
-    } else if (activeRole === 'admin') {
-      setCurrentScreen('admin-trainer-approval');
-    } else {
-      setCurrentScreen('home');
+
+      const updatedProfile = await updateUserProfile(user.id, {
+        name: data.name,
+        profession: data.profession,
+        profileImage: imageUrl
+      });
+
+      setUserName(updatedProfile.name);
+      setUserProfession(updatedProfile.profession);
+      setProfileImage(updatedProfile.profileImage);
+      toast.success('Profile updated successfully!');
+    } catch (err: any) {
+      toast.error('Failed to update profile: ' + err.message);
+      throw err;
     }
   };
 
@@ -136,12 +267,12 @@ export default function App() {
     setActiveTab('home');
   };
 
-  const handleLogout = () => {
-    setCurrentScreen('onboarding');
-    setUserType('free');
-    setUserName('');
-    setUserEmail('');
-    setSavedItems([]);
+  const handleLogout = async () => {
+    try {
+      await signOutUser();
+    } catch {
+      // ignore
+    }
   };
 
   const handleTabChange = (tab: string) => {
@@ -153,6 +284,9 @@ export default function App() {
       saved: 'saved',
       profile: 'profile',
     };
+    if (tab !== 'explore') {
+      setExploreCategory(null);
+    }
     setCurrentScreen(screenMap[tab]);
   };
 
@@ -160,46 +294,54 @@ export default function App() {
     setCurrentScreen('subscription');
   };
 
-  const handlePostJob = (job: JobAnnouncement) => {
-    setJobAnnouncements([...jobAnnouncements, job]);
-    if (job.postStatus === 'approved') {
-      toast.success('Job announcement published successfully!');
-    } else {
-      toast.success('Job announcement submitted for admin review!');
-    }
-    // Navigate back to previous screen
-    if (userRole === 'trainer') {
-      setCurrentScreen('trainer-dashboard');
-    } else if (userRole === 'admin') {
-      setCurrentScreen('admin-trainer-approval');
-    } else {
-      setCurrentScreen('home');
-      setActiveTab('home');
+  const handlePostJob = async (job: JobAnnouncement) => {
+    try {
+      const savedJob = await createJob({
+        ...job,
+        postedByRole: userRole,
+        postedByName: userName,
+        postedByEmail: userEmail,
+      });
+      setJobAnnouncements([savedJob, ...jobAnnouncements]);
+      if (savedJob.postStatus === 'approved') {
+        toast.success('Job announcement published successfully!');
+      } else {
+        toast.success('Job announcement submitted for admin review!');
+      }
+      // Navigate back to previous screen
+      if (userRole === 'trainer') {
+        setCurrentScreen('trainer-dashboard');
+      } else if (userRole === 'admin') {
+        setCurrentScreen('admin-trainer-approval');
+      } else {
+        setCurrentScreen('home');
+        setActiveTab('home');
+      }
+    } catch (err: any) {
+      toast.error('Failed to post job: ' + err.message);
     }
   };
 
-  const handleApproveJob = (jobId: string) => {
-    setJobAnnouncements(
-      jobAnnouncements.map((j) =>
-        j.id === jobId ? { ...j, postStatus: 'approved' as const, verified: true } : j
-      )
-    );
-    toast.success('Job announcement approved and published!');
+  const handleApproveJob = async (jobId: string) => {
+    try {
+      const updatedJob = await updateJobStatus(jobId, 'approved');
+      setJobAnnouncements(jobAnnouncements.map((j) => (j.id === jobId ? updatedJob : j)));
+      toast.success('Job announcement approved and published!');
+    } catch (err: any) { toast.error('Error: ' + err.message); }
   };
 
-  const handleRejectJob = (jobId: string, feedback: string) => {
-    setJobAnnouncements(
-      jobAnnouncements.map((j) =>
-        j.id === jobId ? { ...j, postStatus: 'rejected' as const, adminFeedback: feedback } : j
-      )
-    );
-    toast.info('Job announcement rejected with feedback sent to poster.');
+  const handleRejectJob = async (jobId: string, feedback: string) => {
+    try {
+      const updatedJob = await updateJobStatus(jobId, 'rejected', feedback);
+      setJobAnnouncements(jobAnnouncements.map((j) => (j.id === jobId ? updatedJob : j)));
+      toast.info('Job announcement rejected with feedback sent to poster.');
+    } catch (err: any) { toast.error('Error: ' + err.message); }
   };
 
   const savedJobs = approvedJobs.filter((job) =>
     savedItems.includes(`job:${job.id}`)
   );
-  const savedCourses = mockCourses.filter((course) =>
+  const savedCourses = courses.filter((course) =>
     savedItems.includes(`course:${course.id}`)
   );
 
@@ -218,14 +360,17 @@ export default function App() {
           <LoginScreen
             onComplete={handleLoginComplete}
             onBack={() => setCurrentScreen('onboarding')}
+            onSignUp={() => setCurrentScreen('role-selection')}
           />
         );
 
       case 'signup':
         return (
           <SignUpScreen
+            selectedRole={userRole}
             onComplete={handleLoginComplete}
             onBack={() => setCurrentScreen('onboarding')}
+            onLogin={() => setCurrentScreen('login')}
           />
         );
 
@@ -244,16 +389,18 @@ export default function App() {
               userName={userName}
               userType={userType}
               featuredJobs={approvedJobs.slice(0, 3)}
-              recommendedCourses={mockCourses.slice(0, 2)}
+              recommendedCourses={courses.slice(0, 2)}
               onJobClick={handleJobClick}
               onCourseClick={handleCourseClick}
               onCategoryClick={(category) => {
+                setExploreCategory(category);
                 setActiveTab('explore');
                 setCurrentScreen('explore');
               }}
               onUpgradeClick={handleUpgradeClick}
               onPostJob={() => setCurrentScreen('post-job')}
               onSeeAllJobs={() => {
+                setExploreCategory(null);
                 setActiveTab('explore');
                 setCurrentScreen('explore');
               }}
@@ -267,11 +414,12 @@ export default function App() {
           <>
             <ExploreScreen
               jobs={approvedJobs}
-              courses={mockCourses}
+              courses={courses}
               onJobClick={handleJobClick}
               onCourseClick={handleCourseClick}
               onSaveToggle={handleSaveToggle}
               savedItems={savedItems}
+              initialCategory={exploreCategory}
             />
             <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
           </>
@@ -281,7 +429,7 @@ export default function App() {
         return (
           <>
             <CoursesScreen
-              courses={mockCourses}
+              courses={courses}
               onCourseClick={handleCourseClick}
               onSaveToggle={handleSaveToggle}
               savedItems={savedItems}
@@ -310,14 +458,36 @@ export default function App() {
             <ProfileScreen
               userName={userName}
               userEmail={userEmail}
-              userProfession="Data Scientist"
+              userProfession={userProfession}
               userType={userType}
+              profileImage={profileImage}
               savedItemsCount={savedItems.length}
+              coursesCount={enrollments.filter(e => e.studentEmail === userEmail).length}
               onUpgrade={handleUpgradeClick}
               onLogout={handleLogout}
+              onSavedClick={() => {
+                setActiveTab('saved');
+                setCurrentScreen('saved');
+              }}
+              onCoursesClick={() => {
+                setActiveTab('courses');
+                setCurrentScreen('courses');
+              }}
+              onUpdateProfile={handleUpdateProfile}
+              onSettingsClick={() => setCurrentScreen('settings')}
             />
             <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
           </>
+        );
+
+      case 'settings':
+        return (
+          <SettingsScreen
+            onBack={() => {
+              setCurrentScreen('profile');
+              setActiveTab('profile');
+            }}
+          />
         );
 
       case 'job-detail':
@@ -326,7 +496,7 @@ export default function App() {
             job={selectedJob}
             userType={userType}
             userRole={userRole}
-            relatedCourses={mockCourses.filter(c => c.relatedJobId === selectedJob.id)}
+            relatedCourses={courses.filter(c => c.relatedJobId === selectedJob.id)}
             onBack={() => {
               if (userRole === 'trainer') {
                 setCurrentScreen('trainer-dashboard');
@@ -339,6 +509,8 @@ export default function App() {
               setCurrentScreen('propose-course');
             }}
             onCourseClick={handleCourseClick}
+            isSaved={savedItems.includes(`job:${selectedJob.id}`)}
+            onSaveToggle={() => handleSaveToggle(selectedJob.id, 'job')}
           />
         ) : null;
 
@@ -349,6 +521,8 @@ export default function App() {
             onBack={() => {
               setCurrentScreen(activeTab as Screen);
             }}
+            isSaved={savedItems.includes(`course:${selectedCourse.id}`)}
+            onSaveToggle={() => handleSaveToggle(selectedCourse.id, 'course')}
           />
         ) : null;
 
@@ -370,13 +544,17 @@ export default function App() {
             proposals={courseProposals.filter(p => p.trainerEmail === userEmail)}
             enrollments={enrollments}
             onBack={() => {
-              setCurrentScreen('onboarding');
+              handleLogout();
+            }}
+            onEditProposal={(proposal) => {
+              setEditingProposal(proposal);
+              setCurrentScreen('propose-course');
             }}
             onBrowseJobs={() => {
               setCurrentScreen('trainer-browse-jobs');
             }}
             onViewProposals={() => {
-              // Could navigate to a detailed proposals screen
+              toast.info('Viewing detailed proposals list will be available soon.');
             }}
             onPostJob={() => {
               setCurrentScreen('post-job');
@@ -389,23 +567,48 @@ export default function App() {
           <AdminApprovalScreen
             proposals={courseProposals}
             onBack={() => {
-              setCurrentScreen('onboarding');
+              setCurrentScreen('admin-trainer-approval');
             }}
-            onApprove={(proposalId) => {
-              setCourseProposals(
-                courseProposals.map((p) =>
-                  p.id === proposalId ? { ...p, status: 'approved' as const } : p
-                )
-              );
-              toast.success('Course proposal approved successfully!');
+            onApprove={async (proposalId) => {
+              try {
+                const proposal = courseProposals.find(p => p.id === proposalId);
+                if (!proposal) throw new Error("Proposal not found");
+
+                const updated = await updateProposalStatus(proposalId, 'approved');
+                setCourseProposals(
+                  courseProposals.map((p) => (p.id === proposalId ? updated : p))
+                );
+
+                // Create the course
+                const newCourseData: Partial<Course> = {
+                  title: proposal.courseTitle,
+                  instructor: proposal.trainerName,
+                  instructorBio: proposal.instructorBio,
+                  price: proposal.finalPrice,
+                  enrolled: 0,
+                  description: proposal.courseDescription,
+                  duration: proposal.duration,
+                  category: "Professional", // Fallback, could extract from job if available
+                  verified: true,
+                  relatedJobId: proposal.relatedJobId,
+                  status: 'active',
+                  minEnrollment: proposal.minStudents,
+                };
+                
+                const createdCourse = await createCourse(newCourseData);
+                setCourses([createdCourse, ...courses]);
+
+                toast.success('Course proposal approved and published to courses!');
+              } catch (err: any) { toast.error('Error: ' + err.message); }
             }}
-            onReject={(proposalId, feedback) => {
-              setCourseProposals(
-                courseProposals.map((p) =>
-                  p.id === proposalId ? { ...p, status: 'rejected' as const, adminFeedback: feedback } : p
-                )
-              );
-              toast.info('Course proposal rejected with feedback sent to trainer.');
+            onReject={async (proposalId, feedback) => {
+              try {
+                const updated = await updateProposalStatus(proposalId, 'rejected', feedback);
+                setCourseProposals(
+                  courseProposals.map((p) => (p.id === proposalId ? updated : p))
+                );
+                toast.info('Course proposal rejected with feedback sent to trainer.');
+              } catch (err: any) { toast.error('Error: ' + err.message); }
             }}
           />
         );
@@ -418,21 +621,23 @@ export default function App() {
               // no-op — admin stays on dashboard, use logout to leave
             }}
             onLogout={handleLogout}
-            onApprove={(applicationId) => {
-              setTrainerApplications(
-                trainerApplications.map((app) =>
-                  app.id === applicationId ? { ...app, status: 'approved' as const } : app
-                )
-              );
-              toast.success('Trainer application approved successfully!');
+            onApprove={async (applicationId) => {
+              try {
+                const updated = await updateApplicationStatus(applicationId, 'approved');
+                setTrainerApplications(
+                  trainerApplications.map((app) => (app.id === applicationId ? updated : app))
+                );
+                toast.success('Trainer application approved successfully!');
+              } catch (err: any) { toast.error('Error: ' + err.message); }
             }}
-            onReject={(applicationId, feedback) => {
-              setTrainerApplications(
-                trainerApplications.map((app) =>
-                  app.id === applicationId ? { ...app, status: 'rejected' as const, adminFeedback: feedback } : app
-                )
-              );
-              toast.info('Trainer application rejected with feedback sent to trainer.');
+            onReject={async (applicationId, feedback) => {
+              try {
+                const updated = await updateApplicationStatus(applicationId, 'rejected', feedback);
+                setTrainerApplications(
+                  trainerApplications.map((app) => (app.id === applicationId ? updated : app))
+                );
+                toast.info('Trainer application rejected with feedback sent to trainer.');
+              } catch (err: any) { toast.error('Error: ' + err.message); }
             }}
             onNavigateToCourseApproval={() => {
               setCurrentScreen('admin-approval');
@@ -458,22 +663,38 @@ export default function App() {
           />
         );
 
-      case 'propose-course':
-        return selectedJob ? (
+      case 'propose-course': { // Use block to isolate scope
+        const jobForProposal = editingProposal
+          ? jobAnnouncements.find(j => j.id === editingProposal.relatedJobId) || selectedJob
+          : selectedJob;
+
+        return jobForProposal ? (
           <CourseProposalForm
-            job={selectedJob}
+            job={jobForProposal}
             trainerName={userName}
             trainerEmail={userEmail}
+            initialData={editingProposal || undefined}
             onClose={() => {
-              setCurrentScreen('job-detail');
+              setCurrentScreen(editingProposal ? 'trainer-dashboard' : 'job-detail');
+              setEditingProposal(null);
             }}
-            onSubmit={(proposal) => {
-              setCourseProposals([...courseProposals, proposal]);
-              toast.success('Course proposal submitted for review!');
-              setCurrentScreen('trainer-dashboard');
+            onSubmit={async (proposal) => {
+              try {
+                const saved = await saveProposal(proposal);
+                if (editingProposal) {
+                  setCourseProposals(courseProposals.map(p => p.id === saved.id ? saved : p));
+                  toast.success('Course proposal updated successfully!');
+                } else {
+                  setCourseProposals([saved, ...courseProposals]);
+                  toast.success('Course proposal submitted for review!');
+                }
+                setEditingProposal(null);
+                setCurrentScreen('trainer-dashboard');
+              } catch (err: any) { toast.error('Error: ' + err.message); }
             }}
           />
         ) : null;
+      }
 
       case 'trainer-browse-jobs':
         return (
@@ -489,15 +710,35 @@ export default function App() {
       case 'trainer-application':
         return (
           <TrainerApplicationForm
+            isSignupMode={true}
             onBack={() => {
               setCurrentScreen('role-selection');
             }}
-            onSubmit={(application) => {
-              setTrainerApplications([...trainerApplications, application]);
-              setUserName(application.name);
-              setUserEmail(application.email);
-              toast.success('Trainer application submitted for review!');
-              setCurrentScreen('trainer-pending');
+            onSubmit={async (application, signupData) => {
+              try {
+                if (signupData?.password) {
+                  // Create the account first
+                  await signUpUser(
+                    application.email,
+                    signupData.password,
+                    application.name,
+                    'trainer',
+                    application.profession,
+                    signupData.country || ''
+                  );
+                }
+
+                // Submit to backend
+                const saved = await submitTrainerApplication(application);
+                setTrainerApplications([saved, ...trainerApplications]);
+                // Automatically log them in testing bypass? Our API respects it 
+                // We shouldn't automatically approve in production but preserving bypass logic
+                setUserName(saved.name);
+                setUserEmail(saved.email);
+                setTrainerStatus(saved.status as TrainerStatus);
+                toast.success('Trainer account created & application submitted!');
+                setCurrentScreen('trainer-pending');
+              } catch (err: any) { toast.error('Error: ' + err.message); }
             }}
           />
         );

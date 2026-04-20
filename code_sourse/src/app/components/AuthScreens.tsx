@@ -3,52 +3,41 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
-import { ArrowLeft, User, GraduationCap, Shield, AlertCircle } from 'lucide-react';
+import { ArrowLeft, User, GraduationCap, Shield, AlertCircle, Loader2 } from 'lucide-react';
 import { UserRole } from '../types';
+import { signInUser, signUpUser, signInWithGoogle, resetPassword } from '../../lib/api';
 
 interface LoginScreenProps {
-  onComplete: (userData: { name: string; email: string; role: UserRole }) => void;
-  onBack?: () => void;
-}
-
-interface SignUpScreenProps {
   onComplete: (userData: { name: string; email: string }) => void;
   onBack?: () => void;
+  onSignUp?: () => void;
 }
 
-export function LoginScreen({ onComplete, onBack }: LoginScreenProps) {
+export function LoginScreen({ onComplete, onBack, onSignUp }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('user');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const roles: { id: UserRole; label: string; icon: React.ReactNode }[] = [
-    { id: 'user', label: 'User', icon: <User className="w-4 h-4" /> },
-    { id: 'trainer', label: 'Trainer', icon: <GraduationCap className="w-4 h-4" /> },
-    { id: 'admin', label: 'Admin', icon: <Shield className="w-4 h-4" /> },
-  ];
-
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Admin validation
-    if (selectedRole === 'admin') {
-      if (email === 'admin' && password === '1234') {
-        onComplete({ name: 'Admin', email: 'admin@platform.com', role: 'admin' });
-      } else {
-        setError('Invalid admin credentials. Please check your username and password.');
-      }
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter your email and password.');
       return;
     }
 
-    // Regular user/trainer login
-    if (!email.trim()) {
-      setError('Please enter your email or phone.');
-      return;
+    setIsLoading(true);
+    try {
+      await signInUser(email, password);
+      // Wait for App.tsx's onAuthStateChange to handle true navigation
+      onComplete({ name: email.split('@')[0] || 'User', email });
+    } catch (err: any) {
+      setError(err.message || 'Failed to login');
+    } finally {
+      setIsLoading(false);
     }
-
-    onComplete({ name: email.split('@')[0] || 'User', email, role: selectedRole });
   };
 
   return (
@@ -70,49 +59,6 @@ export function LoginScreen({ onComplete, onBack }: LoginScreenProps) {
           </p>
         </div>
 
-        {/* Role Selector */}
-        <div className="mb-6">
-          <Label className="mb-3 block">Sign in as</Label>
-          <div className="grid grid-cols-3 gap-2">
-            {roles.map((role) => (
-              <button
-                key={role.id}
-                onClick={() => {
-                  setSelectedRole(role.id);
-                  setError('');
-                  // Clear fields when switching to/from admin
-                  if (role.id === 'admin') {
-                    setEmail('');
-                    setPassword('');
-                  }
-                }}
-                className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
-                  selectedRole === role.id
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/30'
-                }`}
-              >
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    selectedRole === role.id
-                      ? 'bg-primary text-white'
-                      : 'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  {role.icon}
-                </div>
-                <span
-                  className={`text-xs font-medium ${
-                    selectedRole === role.id ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                >
-                  {role.label}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Error Message */}
         {error && (
           <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-xl flex items-start gap-2">
@@ -123,13 +69,11 @@ export function LoginScreen({ onComplete, onBack }: LoginScreenProps) {
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="email">
-              {selectedRole === 'admin' ? 'Username' : 'Email or Phone'}
-            </Label>
+            <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="text"
-              placeholder={selectedRole === 'admin' ? 'Enter admin username' : 'Enter your email or phone'}
+              placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="h-12 bg-input-background"
@@ -148,24 +92,39 @@ export function LoginScreen({ onComplete, onBack }: LoginScreenProps) {
             />
           </div>
 
-          {selectedRole !== 'admin' && (
-            <button
-              type="button"
-              className="text-primary text-sm"
-            >
-              Forgot password?
-            </button>
-          )}
+          <button
+            type="button"
+            className="text-primary text-sm"
+            onClick={async () => {
+              if (!email.trim()) {
+                setError('Please enter your email to reset your password.');
+                return;
+              }
+              try {
+                setIsLoading(true);
+                await resetPassword(email);
+                setError('');
+                alert('Password reset email sent! Check your inbox.');
+              } catch (err: any) {
+                setError(err.message || 'Failed to send reset email');
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+          >
+            Forgot password?
+          </button>
 
           <Button
             type="submit"
+            disabled={isLoading}
             className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 mt-6"
           >
-            {selectedRole === 'admin' ? 'Login as Admin' : 'Login'}
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Login
           </Button>
 
-          {selectedRole !== 'admin' && (
-            <>
+          <>
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-border"></div>
@@ -182,6 +141,15 @@ export function LoginScreen({ onComplete, onBack }: LoginScreenProps) {
                   type="button"
                   variant="outline"
                   className="w-full h-12"
+                  onClick={async () => {
+                    try {
+                      setIsLoading(true);
+                      await signInWithGoogle();
+                    } catch (err: any) {
+                      setError(err.message || 'Failed to initialize Google Login');
+                      setIsLoading(false);
+                    }
+                  }}
                 >
                   <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                     <path
@@ -203,38 +171,31 @@ export function LoginScreen({ onComplete, onBack }: LoginScreenProps) {
                   </svg>
                   Continue with Google
                 </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-12"
-                >
-                  <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-                  </svg>
-                  Continue with Apple
-                </Button>
               </div>
             </>
-          )}
         </form>
       </div>
 
-      {selectedRole !== 'admin' && (
-        <div className="p-8 text-center">
-          <p className="text-muted-foreground text-sm">
-            Don't have an account?{' '}
-            <button className="text-primary">
-              Sign Up
-            </button>
-          </p>
-        </div>
-      )}
+      <div className="p-8 text-center">
+        <p className="text-muted-foreground text-sm">
+          Don't have an account?{' '}
+          <button onClick={onSignUp} className="text-primary">
+            Sign Up
+          </button>
+        </p>
+      </div>
     </div>
   );
 }
 
-export function SignUpScreen({ onComplete, onBack }: SignUpScreenProps) {
+interface SignUpScreenProps {
+  onComplete: (userData: { name: string; email: string }) => void;
+  onBack?: () => void;
+  selectedRole: UserRole;
+  onLogin?: () => void;
+}
+
+export function SignUpScreen({ onComplete, onBack, selectedRole, onLogin }: SignUpScreenProps) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -242,11 +203,33 @@ export function SignUpScreen({ onComplete, onBack }: SignUpScreenProps) {
     profession: '',
     country: '',
     agreedToTerms: false,
+    role: selectedRole,
   });
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onComplete({ name: formData.name, email: formData.email });
+    setError('');
+
+    if (!formData.agreedToTerms) {
+      setError('You must agree to the Terms of Service.');
+      return;
+    }
+    if (!formData.email || !formData.password || !formData.name) {
+      setError('Please fill in all required fields.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await signUpUser(formData.email, formData.password, formData.name, formData.role, formData.profession, formData.country);
+      onComplete({ name: formData.name, email: formData.email });
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign up');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -269,6 +252,12 @@ export function SignUpScreen({ onComplete, onBack }: SignUpScreenProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-xl flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="name">Full Name</Label>
             <Input
@@ -354,8 +343,10 @@ export function SignUpScreen({ onComplete, onBack }: SignUpScreenProps) {
 
           <Button
             type="submit"
+            disabled={isLoading}
             className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 mt-6"
           >
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Create Account
           </Button>
         </form>
@@ -363,7 +354,7 @@ export function SignUpScreen({ onComplete, onBack }: SignUpScreenProps) {
         <div className="mt-6 text-center">
           <p className="text-muted-foreground text-sm">
             Already have an account?{' '}
-            <button className="text-primary">
+            <button onClick={onLogin} className="text-primary">
               Login
             </button>
           </p>

@@ -4,20 +4,25 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
+import { Checkbox } from './ui/checkbox';
 
 interface TrainerApplicationFormProps {
   onBack?: () => void;
   onClose?: () => void;
-  onSubmit: (application: any) => void;
+  onSubmit: (application: any, signupData?: { password?: string; country?: string }) => void;
+  isSignupMode?: boolean;
 }
 
-export function TrainerApplicationForm({ onBack, onClose, onSubmit }: TrainerApplicationFormProps) {
+export function TrainerApplicationForm({ onBack, onClose, onSubmit, isSignupMode }: TrainerApplicationFormProps) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phoneNumber: '',
     profession: '',
     bio: '',
+    password: '',
+    country: '',
+    agreedToTerms: false,
   });
   const [cvFile, setCvFile] = useState<File | null>(null);
 
@@ -41,6 +46,11 @@ export function TrainerApplicationForm({ onBack, onClose, onSubmit }: TrainerApp
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (isSignupMode && !formData.agreedToTerms) {
+      alert('You must agree to the Terms of Service and Privacy Policy.');
+      return;
+    }
+
     const application = {
       id: `trainer-app-${Date.now()}`,
       name: formData.name,
@@ -54,7 +64,7 @@ export function TrainerApplicationForm({ onBack, onClose, onSubmit }: TrainerApp
       status: 'pending',
     };
 
-    onSubmit(application);
+    onSubmit(application, isSignupMode ? { password: formData.password, country: formData.country } : undefined);
   };
 
   return (
@@ -115,6 +125,21 @@ export function TrainerApplicationForm({ onBack, onClose, onSubmit }: TrainerApp
                 />
               </div>
 
+              {isSignupMode && (
+                <div>
+                  <Label htmlFor="password">Password *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Create a strong password"
+                    required
+                    className="mt-2"
+                  />
+                </div>
+              )}
+
               <div>
                 <Label htmlFor="phoneNumber">Phone Number *</Label>
                 <Input
@@ -139,6 +164,21 @@ export function TrainerApplicationForm({ onBack, onClose, onSubmit }: TrainerApp
                   className="mt-2"
                 />
               </div>
+
+              {isSignupMode && (
+                <div>
+                  <Label htmlFor="country">Country *</Label>
+                  <Input
+                    id="country"
+                    type="text"
+                    value={formData.country}
+                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                    placeholder="Enter your country"
+                    required
+                    className="mt-2"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -204,6 +244,22 @@ export function TrainerApplicationForm({ onBack, onClose, onSubmit }: TrainerApp
               </label>
             </div>
           </div>
+
+          {/* Terms of Service for Signup */}
+          {isSignupMode && (
+            <div className="flex items-start space-x-3 pt-2">
+              <Checkbox
+                id="terms"
+                checked={formData.agreedToTerms}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, agreedToTerms: checked as boolean })
+                }
+              />
+              <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed">
+                I agree to the Terms of Service and Privacy Policy
+              </label>
+            </div>
+          )}
         </div>
       </form>
 

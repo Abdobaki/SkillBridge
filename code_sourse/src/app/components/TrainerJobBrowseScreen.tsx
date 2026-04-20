@@ -1,4 +1,5 @@
 import { ArrowLeft, Briefcase, MapPin, Calendar, GraduationCap } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { JobAnnouncement } from '../types';
@@ -47,7 +48,12 @@ export function TrainerJobBrowseScreen({ jobs, onBack, onJobClick }: TrainerJobB
                 </div>
                 <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  <span>{job.posted}</span>
+                  <span>{
+                    (() => {
+                      try { return formatDistanceToNow(new Date(job.posted), { addSuffix: true }); }
+                      catch { return job.posted; }
+                    })()
+                  }</span>
                 </div>
               </div>
 

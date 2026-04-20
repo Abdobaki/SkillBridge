@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, SlidersHorizontal, MapPin, Briefcase, BookOpen, Bookmark, Clock, X, Check } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -36,6 +37,7 @@ interface ExploreScreenProps {
   onCourseClick: (course: Course) => void;
   onSaveToggle: (id: string, type: 'job' | 'course') => void;
   savedItems: string[];
+  initialCategory?: string | null;
 }
 
 export function ExploreScreen({
@@ -45,11 +47,14 @@ export function ExploreScreen({
   onCourseClick,
   onSaveToggle,
   savedItems,
+  initialCategory,
 }: ExploreScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('announcements');
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(!!initialCategory);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    initialCategory ? [initialCategory] : []
+  );
 
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
@@ -259,7 +264,11 @@ export function ExploreScreen({
                         </p>
                       </div>
                       <button
-                        onClick={() => onSaveToggle(job.id, 'job')}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onSaveToggle(job.id, 'job');
+                        }}
                         className="ml-2 p-1.5 rounded-lg hover:bg-muted"
                       >
                         <Bookmark
@@ -291,7 +300,12 @@ export function ExploreScreen({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Clock className="w-4 h-4" />
-                        <span>{job.posted}</span>
+                        <span>{
+                          (() => {
+                            try { return formatDistanceToNow(new Date(job.posted), { addSuffix: true }); }
+                            catch { return job.posted; }
+                          })()
+                        }</span>
                       </div>
                       <Button
                         onClick={() => onJobClick(job)}
@@ -348,7 +362,11 @@ export function ExploreScreen({
                       {course.title}
                     </h4>
                     <button
-                      onClick={() => onSaveToggle(course.id, 'course')}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onSaveToggle(course.id, 'course');
+                      }}
                       className="ml-2 p-1.5 rounded-lg hover:bg-muted"
                     >
                       <Bookmark

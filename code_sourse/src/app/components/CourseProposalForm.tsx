@@ -5,34 +5,41 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { JobAnnouncement, DeliveryMode } from '../types';
+import { JobAnnouncement, DeliveryMode, CourseProposal } from '../types';
 import { Badge } from './ui/badge';
 
 interface CourseProposalFormProps {
   job: JobAnnouncement;
   trainerName: string;
   trainerEmail: string;
+  initialData?: CourseProposal;
   onClose: () => void;
-  onSubmit: (proposal: any) => void;
+  onSubmit: (proposal: CourseProposal) => void;
 }
 
 export function CourseProposalForm({
   job,
   trainerName,
   trainerEmail,
+  initialData,
   onClose,
   onSubmit,
 }: CourseProposalFormProps) {
+  const [descriptionInputMode, setDescriptionInputMode] = useState<'text' | 'file'>(
+    initialData?.courseDescriptionFile ? 'file' : 'text'
+  );
+  const [descriptionFile, setDescriptionFile] = useState<File | null>(null);
+
   const [formData, setFormData] = useState({
-    courseTitle: '',
-    courseDescription: '',
-    skillsCovered: '',
-    duration: '',
-    deliveryMode: 'online' as DeliveryMode,
-    basePrice: '',
-    minStudents: '',
-    startDate: '',
-    instructorBio: '',
+    courseTitle: initialData?.courseTitle || '',
+    courseDescription: initialData?.courseDescription || '',
+    skillsCovered: initialData?.skillsCovered?.join(', ') || '',
+    duration: initialData?.duration || '',
+    deliveryMode: (initialData?.deliveryMode || 'online') as DeliveryMode,
+    basePrice: initialData?.basePrice?.toString() || '',
+    minStudents: initialData?.minStudents?.toString() || '',
+    startDate: initialData?.startDate || '',
+    instructorBio: initialData?.instructorBio || '',
   });
 
   const platformCommissionRate = 0.15; // 15% commission
@@ -44,10 +51,12 @@ export function CourseProposalForm({
     const commission = Math.round(basePrice * platformCommissionRate);
     const finalPrice = basePrice + commission;
 
-    const proposal = {
-      id: `prop${Date.now()}`,
+    const proposal: CourseProposal = {
+      id: initialData?.id || `prop${Date.now()}`,
       courseTitle: formData.courseTitle,
-      courseDescription: formData.courseDescription,
+      courseDescription: descriptionInputMode === 'text' ? formData.courseDescription : '',
+      courseDescriptionFileName: descriptionFile ? descriptionFile.name : initialData?.courseDescriptionFileName,
+      courseDescriptionFile: descriptionFile ? URL.createObjectURL(descriptionFile) : initialData?.courseDescriptionFile,
       skillsCovered: formData.skillsCovered.split(',').map(s => s.trim()),
       duration: formData.duration,
       deliveryMode: formData.deliveryMode,
@@ -60,11 +69,11 @@ export function CourseProposalForm({
       instructorBio: formData.instructorBio,
       relatedJobId: job.id,
       relatedJobTitle: job.title,
-      trainerId: 'trainer1',
+      trainerId: initialData?.trainerId || 'trainer1',
       trainerName: trainerName,
       trainerEmail: trainerEmail,
-      status: 'pending',
-      createdAt: new Date().toISOString().split('T')[0],
+      status: initialData?.status === 'rejected' ? 'pending' : (initialData?.status || 'pending'),
+      createdAt: initialData?.createdAt || new Date().toISOString(),
     };
 
     onSubmit(proposal);
@@ -102,16 +111,80 @@ export function CourseProposalForm({
 
             {/* Course Description */}
             <div>
-              <Label htmlFor="courseDescription">Course Description *</Label>
-              <Textarea
-                id="courseDescription"
-                value={formData.courseDescription}
-                onChange={(e) => setFormData({ ...formData, courseDescription: e.target.value })}
-                placeholder="Detailed description of what students will learn..."
-                required
-                rows={4}
-                className="mt-2"
-              />
+              <div className="flex items-center justify-between mb-2">
+                <Label htmlFor="courseDescription">Course Description *</Label>
+                <div className="flex bg-muted p-1 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setDescriptionInputMode('text')}
+                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                      descriptionInputMode === 'text'
+                        ? 'bg-background shadow-sm text-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Write Manually
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDescriptionInputMode('file')}
+                    className={`px-3 py-1 flex items-center gap-1 text-xs rounded-md transition-colors ${
+                      descriptionInputMode === 'file'
+                        ? 'bg-background shadow-sm text-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Upload className="w-3 h-3" />
+                    Upload File
+                  </button>
+                </div>
+              </div>
+
+              {descriptionInputMode === 'text' ? (
+                <Textarea
+                  id="courseDescription"
+                  value={formData.courseDescription}
+                  onChange={(e) => setFormData({ ...formData, courseDescription: e.target.value })}
+                  placeholder="Detailed description of what students will learn..."
+                  required={descriptionInputMode === 'text'}
+                  rows={4}
+                  className="mt-2"
+                />
+              ) : (
+                <div className="border-2 border-dashed border-border rounded-xl p-6 text-center mt-2">
+                  <input
+                    type="file"
+                    id="descriptionFile"
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.txt"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setDescriptionFile(e.target.files[0]);
+                        setFormData({ ...formData, courseDescription: '' });
+                      }
+                    }}
+                  />
+                  <Label
+                    htmlFor="descriptionFile"
+                    className="cursor-pointer flex flex-col items-center gap-2"
+                  >
+                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                      <Upload className="w-5 h-5 text-primary" />
+                    </div>
+                    {descriptionFile ? (
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{descriptionFile.name}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Click to replace file</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Click to upload document</p>
+                        <p className="text-xs text-muted-foreground mt-1">PDF, DOC, DOCX, or TXT up to 5MB</p>
+                      </div>
+                    )}
+                  </Label>
+                </div>
+              )}
             </div>
 
             {/* Skills Covered */}

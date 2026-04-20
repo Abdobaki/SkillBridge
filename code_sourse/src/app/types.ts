@@ -63,6 +63,8 @@ export interface CourseProposal {
   id: string;
   courseTitle: string;
   courseDescription: string;
+  courseDescriptionFileName?: string;
+  courseDescriptionFile?: string;
   skillsCovered: string[];
   duration: string;
   deliveryMode: DeliveryMode;

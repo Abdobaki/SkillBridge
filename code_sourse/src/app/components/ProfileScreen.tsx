@@ -1,6 +1,8 @@
-import { User, Crown, Briefcase, BookOpen, Bookmark, CreditCard, Settings, LogOut, ChevronRight } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { User as UserIcon, Crown, Briefcase, BookOpen, Bookmark, CreditCard, Settings, LogOut, ChevronRight, Camera, Check, X, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { Input } from './ui/input';
 import { UserType } from '../types';
 
 interface ProfileScreenProps {
@@ -8,9 +10,15 @@ interface ProfileScreenProps {
   userEmail: string;
   userProfession: string;
   userType: UserType;
+  profileImage?: string;
   savedItemsCount: number;
+  coursesCount?: number;
   onUpgrade: () => void;
   onLogout: () => void;
+  onSavedClick?: () => void;
+  onCoursesClick?: () => void;
+  onSettingsClick?: () => void;
+  onUpdateProfile: (data: { name: string; profession: string; imageFile?: File }) => Promise<void>;
 }
 
 export function ProfileScreen({
@@ -18,28 +26,38 @@ export function ProfileScreen({
   userEmail,
   userProfession,
   userType,
+  profileImage,
   savedItemsCount,
+  coursesCount = 0,
   onUpgrade,
   onLogout,
+  onSavedClick,
+  onCoursesClick,
+  onSettingsClick,
+  onUpdateProfile,
 }: ProfileScreenProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editedName, setEditedName] = useState(userName);
+  const [editedProfession, setEditedProfession] = useState(userProfession);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const menuItems = [
-    {
-      icon: Briefcase,
-      label: 'My Applications',
-      badge: '3',
-      color: 'text-primary',
-    },
     {
       icon: BookOpen,
       label: 'My Courses',
-      badge: '2',
+      badge: coursesCount.toString(),
       color: 'text-accent',
+      onClick: onCoursesClick,
     },
     {
       icon: Bookmark,
       label: 'Saved',
       badge: savedItemsCount.toString(),
       color: 'text-accent-orange',
+      onClick: onSavedClick,
     },
     {
       icon: CreditCard,
@@ -50,33 +68,140 @@ export function ProfileScreen({
       icon: Settings,
       label: 'Settings',
       color: 'text-muted-foreground',
+      onClick: onSettingsClick,
     },
   ];
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await onUpdateProfile({
+        name: editedName,
+        profession: editedProfession,
+        imageFile: selectedFile || undefined,
+      });
+      setIsEditing(false);
+      setSelectedFile(null);
+      setPreviewUrl(null);
+    } catch (error) {
+      console.error("Save failed:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditedName(userName);
+    setEditedProfession(userProfession);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setIsEditing(false);
+  };
 
   return (
     <div className="h-full flex flex-col bg-background overflow-y-auto pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-br from-primary to-primary/80 px-6 pt-12 pb-8 rounded-b-[32px]">
+      <div className="bg-gradient-to-br from-primary to-primary/80 px-6 pt-12 pb-8 rounded-b-[32px] relative">
         <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-            <User className="w-10 h-10 text-primary-foreground" />
+          <div className="relative">
+            <div className="w-20 h-20 rounded-full bg-primary-foreground/20 flex items-center justify-center overflow-hidden border-2 border-white/20">
+              {previewUrl || profileImage ? (
+                <img src={previewUrl || profileImage} alt={userName} className="w-full h-full object-cover" />
+              ) : (
+                <UserIcon className="w-10 h-10 text-primary-foreground" />
+              )}
+            </div>
+            {isEditing && (
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute bottom-0 right-0 w-8 h-8 bg-accent rounded-full flex items-center justify-center border-2 border-primary text-white shadow-lg"
+              >
+                <Camera className="w-4 h-4" />
+              </button>
+            )}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*" 
+              onChange={handleImageChange} 
+            />
           </div>
           <div className="flex-1">
-            <h2 className="text-primary-foreground text-xl mb-1">
-              {userName}
-            </h2>
-            <p className="text-primary-foreground/80 text-sm mb-2">
-              {userProfession}
-            </p>
-            {userType === 'premium' ? (
-              <Badge className="bg-accent-orange text-white border-0 w-fit">
-                <Crown className="w-3 h-3 mr-1" />
-                Premium Member
-              </Badge>
+            {isEditing ? (
+              <div className="space-y-2">
+                <Input 
+                  value={editedName} 
+                  onChange={(e) => setEditedName(e.target.value)}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/50 h-8 text-lg"
+                  placeholder="Your Name"
+                />
+                <Input 
+                  value={editedProfession} 
+                  onChange={(e) => setEditedProfession(e.target.value)}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/50 h-7 text-sm"
+                  placeholder="Your Profession"
+                />
+              </div>
             ) : (
-              <Badge className="bg-primary-foreground/20 text-primary-foreground border-0 w-fit">
-                Free Plan
-              </Badge>
+              <>
+                <h2 className="text-primary-foreground text-xl mb-1">
+                  {userName}
+                </h2>
+                <p className="text-primary-foreground/80 text-sm mb-2">
+                  {userProfession}
+                </p>
+                {userType === 'premium' ? (
+                  <Badge className="bg-accent-orange text-white border-0 w-fit">
+                    <Crown className="w-3 h-3 mr-1" />
+                    Premium Member
+                  </Badge>
+                ) : (
+                  <Badge className="bg-primary-foreground/20 text-primary-foreground border-0 w-fit">
+                    Free Plan
+                  </Badge>
+                )}
+              </>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            {!isEditing ? (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsEditing(true)}
+                className="text-primary-foreground hover:bg-white/10"
+              >
+                Edit
+              </Button>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <Button 
+                  size="sm" 
+                  onClick={handleSave} 
+                  disabled={isSaving}
+                  className="bg-accent text-white hover:bg-accent/90"
+                >
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={handleCancel}
+                  className="text-white hover:bg-white/10"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -90,7 +215,7 @@ export function ProfileScreen({
         </div>
 
         {/* Upgrade CTA for Free Users */}
-        {userType === 'free' && (
+        {userType === 'free' && !isEditing && (
           <div className="bg-gradient-to-br from-accent-orange/20 to-primary/10 rounded-2xl p-6 border border-accent-orange/30 mb-6">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center shrink-0">
@@ -119,6 +244,7 @@ export function ProfileScreen({
             return (
               <button
                 key={index}
+                onClick={item.onClick}
                 className="w-full bg-card rounded-2xl p-4 border border-border hover:border-primary transition-colors flex items-center gap-4"
               >
                 <div className={`w-10 h-10 rounded-xl bg-muted flex items-center justify-center ${item.color}`}>

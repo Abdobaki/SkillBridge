@@ -58,6 +58,9 @@
   --muted-foreground: #9CA3AF;
   --accent: #10B981;
   --accent-foreground: #ffffff;
+  --accent-orange: #f97316;
+  --input-background: #374151;
+  --switch-background: #4b5563;
   --destructive: #EF4444;
   --destructive-foreground: #ffffff;
   --border: #374151;

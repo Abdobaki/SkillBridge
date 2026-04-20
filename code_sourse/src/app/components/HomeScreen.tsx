@@ -2,9 +2,15 @@ import { Bell, Crown, MapPin, Briefcase, Lock, ChevronRight, PlusCircle } from '
 import { UserType, JobAnnouncement, Course } from '../types';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { categories } from '../mockData';
+const categories = [
+  { id: '1', name: 'Computer Science', icon: 'Laptop' },
+  { id: '2', name: 'Engineering', icon: 'Cog' },
+  { id: '3', name: 'Business', icon: 'Briefcase' },
+  { id: '4', name: 'Life Sciences', icon: 'Microscope' },
+  { id: '5', name: 'Mathematics', icon: 'Calculator' },
+  { id: '6', name: 'Physics', icon: 'Atom' },
+];
 import * as Icons from 'lucide-react';
-
 interface HomeScreenProps {
   userName: string;
   userType: UserType;

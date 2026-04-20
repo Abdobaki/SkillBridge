@@ -1,4 +1,4 @@
-import { ArrowLeft, MapPin, Briefcase, Calendar, Lock, CheckCircle2, AlertCircle, GraduationCap, Users, Clock } from 'lucide-react';
+import { ArrowLeft, MapPin, Briefcase, Calendar, Lock, CheckCircle2, AlertCircle, GraduationCap, Users, Clock, Bookmark } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { JobAnnouncement, UserType, UserRole, Course } from '../types';
@@ -12,6 +12,8 @@ interface JobDetailScreenProps {
   onUpgrade: () => void;
   onProposeCourse?: () => void;
   onCourseClick?: (course: Course) => void;
+  isSaved?: boolean;
+  onSaveToggle?: () => void;
 }
 
 export function JobDetailScreen({ 
@@ -23,6 +25,8 @@ export function JobDetailScreen({
   onUpgrade,
   onProposeCourse,
   onCourseClick,
+  isSaved,
+  onSaveToggle,
 }: JobDetailScreenProps) {
   const isLocked = userType === 'free' && userRole !== 'trainer'; // Trainers can see everything
   const isTrainer = userRole === 'trainer';
@@ -30,10 +34,15 @@ export function JobDetailScreen({
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-background">
       {/* Header */}
-      <div className="px-6 pt-12 pb-4 bg-card border-b border-border">
+      <div className="px-6 pt-12 pb-4 bg-card border-b border-border flex items-center justify-between">
         <button onClick={onBack} className="p-2 -ml-2 mb-4">
           <ArrowLeft className="w-6 h-6 text-foreground" />
         </button>
+        {onSaveToggle && (
+          <button onClick={onSaveToggle} className="p-2 mb-4 rounded-lg hover:bg-muted transition-colors">
+            <Bookmark className={`w-6 h-6 ${isSaved ? 'fill-primary text-primary' : 'text-foreground'}`} />
+          </button>
+        )}
       </div>
 
       {/* Content */}
@@ -206,22 +215,16 @@ export function JobDetailScreen({
       </div>
 
       {/* Bottom Actions */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 bg-card border-t border-border">
-        {isLocked ? (
+      {isLocked && (
+        <div className="absolute bottom-0 left-0 right-0 p-6 bg-card border-t border-border">
           <Button
             onClick={onUpgrade}
             className="w-full h-12 bg-accent-orange text-white hover:bg-accent-orange/90"
           >
             Upgrade to Premium
           </Button>
-        ) : (
-          <Button
-            className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            Apply Now
-          </Button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
