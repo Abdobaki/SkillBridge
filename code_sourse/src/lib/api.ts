@@ -7,6 +7,8 @@ import {
   TrainerApplication, 
   User 
 } from '../app/types';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 // Helper to convert snake_case DB columns to camelCase matching our types.ts
 export function toCamelCase(obj: any): any {
@@ -59,13 +61,21 @@ export async function signInUser(email: string, password: string) {
 }
 
 export async function signInWithGoogle() {
+  const isNative = Capacitor.isNativePlatform();
+  const redirectTo = isNative ? 'com.skillbridge.app://login-callback' : window.location.origin;
+  
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin
+      redirectTo: redirectTo,
+      skipBrowserRedirect: isNative
     }
   });
   if (error) throw error;
+  
+  if (isNative && data?.url) {
+    await Browser.open({ url: data.url });
+  }
   return data;
 }
 
@@ -105,13 +115,35 @@ export async function getCurrentUser() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: profile, error } = await supabase
+  let { data: profile, error } = await supabase
     .from('users')
     .select('*')
     .eq('id', user.id)
     .single();
 
-  if (error) {
+  if (error && error.code === 'PGRST116') {
+    // No profile found, create default one
+    const newProfile = {
+      id: user.id,
+      name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+      email: user.email,
+      role: 'user',
+      trainer_status: 'pending',
+      profession: 'Professional',
+      created_at: new Date().toISOString()
+    };
+    const { data: created, error: insertError } = await supabase
+      .from('users')
+      .insert(newProfile)
+      .select()
+      .single();
+      
+    if (insertError) {
+      console.error("Error creating user profile:", insertError);
+      return { authUser: user, profile: null };
+    }
+    profile = created;
+  } else if (error) {
     console.error("Error fetching user profile:", error);
     return { authUser: user, profile: null };
   }
@@ -279,4 +311,90 @@ export async function changePassword(newPassword: string) {
   });
   if (error) throw error;
   return data;
+}
+
+// ----------------------------------------------------
+// JOB APPLICATIONS
+// ----------------------------------------------------
+
+export async function applyToJob(jobId: string, userEmail: string, userName: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from('job_applications')
+    .insert({
+      user_id: user.id,
+      user_email: userEmail,
+      user_name: userName,
+      job_id: jobId,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return toCamelCase(data);
+}
+
+export async function withdrawApplication(jobId: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase
+    .from('job_applications')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('job_id', jobId);
+  if (error) throw error;
+}
+
+export async function fetchUserApplications() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from('job_applications')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('applied_at', { ascending: false });
+  if (error) throw error;
+  return toCamelCase(data) as { id: string; jobId: string; appliedAt: string }[];
+}
+
+// ----------------------------------------------------
+// ADMIN JOB MANAGEMENT
+// ----------------------------------------------------
+
+export async function deleteJob(jobId: string) {
+  const { error } = await supabase
+    .from('job_announcements')
+    .delete()
+    .eq('id', jobId);
+  if (error) throw error;
+}
+
+export async function updateJob(jobId: string, updates: Partial<JobAnnouncement>) {
+  const { id, ...rest } = updates;
+  const payload = toSnakeCase(rest);
+  const { data, error } = await supabase
+    .from('job_announcements')
+    .update(payload)
+    .eq('id', jobId)
+    .select()
+    .single();
+  if (error) throw error;
+  return toCamelCase(data) as JobAnnouncement;
+}
+
+// ----------------------------------------------------
+// DEADLINE REMINDERS
+// ----------------------------------------------------
+
+export async function triggerDeadlineReminders() {
+  const { data, error } = await supabase.functions.invoke('deadline-reminders');
+  if (error) throw error;
+  return data as { 
+    message: string; 
+    emailsSent: number; 
+    debug?: { jobsFound: number; applicationsFound: number; emailFailures: string[] } 
+  };
 }

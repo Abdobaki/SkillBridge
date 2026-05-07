@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { User as UserIcon, Crown, Briefcase, BookOpen, Bookmark, CreditCard, Settings, LogOut, ChevronRight, Camera, Check, X, Loader2 } from 'lucide-react';
+import { User as UserIcon, Crown, Briefcase, BookOpen, Bookmark, CreditCard, Settings, LogOut, ChevronRight, Camera, Check, X, Loader2, FileCheck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
@@ -12,10 +12,12 @@ interface ProfileScreenProps {
   userType: UserType;
   profileImage?: string;
   savedItemsCount: number;
+  appliedJobsCount?: number;
   coursesCount?: number;
   onUpgrade: () => void;
   onLogout: () => void;
   onSavedClick?: () => void;
+  onAppliedClick?: () => void;
   onCoursesClick?: () => void;
   onSettingsClick?: () => void;
   onUpdateProfile: (data: { name: string; profession: string; imageFile?: File }) => Promise<void>;
@@ -28,10 +30,12 @@ export function ProfileScreen({
   userType,
   profileImage,
   savedItemsCount,
+  appliedJobsCount = 0,
   coursesCount = 0,
   onUpgrade,
   onLogout,
   onSavedClick,
+  onAppliedClick,
   onCoursesClick,
   onSettingsClick,
   onUpdateProfile,
@@ -58,6 +62,13 @@ export function ProfileScreen({
       badge: savedItemsCount.toString(),
       color: 'text-accent-orange',
       onClick: onSavedClick,
+    },
+    {
+      icon: FileCheck,
+      label: 'Applied Jobs',
+      badge: appliedJobsCount.toString(),
+      color: 'text-primary',
+      onClick: onAppliedClick,
     },
     {
       icon: CreditCard,

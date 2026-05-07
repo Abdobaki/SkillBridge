@@ -1,4 +1,4 @@
-import { ArrowLeft, MapPin, Briefcase, Calendar, Lock, CheckCircle2, AlertCircle, GraduationCap, Users, Clock, Bookmark } from 'lucide-react';
+import { ArrowLeft, MapPin, Briefcase, Calendar, Lock, CheckCircle2, AlertCircle, GraduationCap, Users, Clock, Bookmark, Send } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { JobAnnouncement, UserType, UserRole, Course } from '../types';
@@ -14,6 +14,8 @@ interface JobDetailScreenProps {
   onCourseClick?: (course: Course) => void;
   isSaved?: boolean;
   onSaveToggle?: () => void;
+  isApplied?: boolean;
+  onApply?: () => void;
 }
 
 export function JobDetailScreen({ 
@@ -27,6 +29,8 @@ export function JobDetailScreen({
   onCourseClick,
   isSaved,
   onSaveToggle,
+  isApplied,
+  onApply,
 }: JobDetailScreenProps) {
   const isLocked = userType === 'free' && userRole !== 'trainer'; // Trainers can see everything
   const isTrainer = userRole === 'trainer';
@@ -215,13 +219,37 @@ export function JobDetailScreen({
       </div>
 
       {/* Bottom Actions */}
-      {isLocked && (
+      {isLocked ? (
         <div className="absolute bottom-0 left-0 right-0 p-6 bg-card border-t border-border">
           <Button
             onClick={onUpgrade}
             className="w-full h-12 bg-accent-orange text-white hover:bg-accent-orange/90"
           >
             Upgrade to Premium
+          </Button>
+        </div>
+      ) : !isTrainer && onApply && (
+        <div className="absolute bottom-0 left-0 right-0 p-6 bg-card border-t border-border">
+          <Button
+            onClick={onApply}
+            disabled={isApplied}
+            className={`w-full h-12 ${
+              isApplied
+                ? 'bg-accent/10 text-accent border border-accent/30 cursor-default'
+                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+            }`}
+          >
+            {isApplied ? (
+              <>
+                <CheckCircle2 className="w-5 h-5 mr-2" />
+                Applied
+              </>
+            ) : (
+              <>
+                <Send className="w-5 h-5 mr-2" />
+                Apply Now
+              </>
+            )}
           </Button>
         </div>
       )}

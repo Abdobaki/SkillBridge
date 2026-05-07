@@ -7,6 +7,7 @@ import { HomeScreen } from './components/HomeScreen';
 import { ExploreScreen } from './components/ExploreScreen';
 import { CoursesScreen } from './components/CoursesScreen';
 import { SavedScreen } from './components/SavedScreen';
+import { AppliedScreen } from './components/AppliedScreen';
 import { ProfileScreen } from './components/ProfileScreen';
 import { JobDetailScreen } from './components/JobDetailScreen';
 import { CourseDetailScreen } from './components/CourseDetailScreen';
@@ -18,6 +19,7 @@ import { TrainerDashboard } from './components/TrainerDashboard';
 import { AdminApprovalScreen } from './components/AdminApprovalScreen';
 import { AdminTrainerApprovalScreen } from './components/AdminTrainerApprovalScreen';
 import { AdminJobApprovalScreen } from './components/AdminJobApprovalScreen';
+import { AdminJobHistoryScreen } from './components/AdminJobHistoryScreen';
 import { CourseProposalForm } from './components/CourseProposalForm';
 import { TrainerJobBrowseScreen } from './components/TrainerJobBrowseScreen';
 import { PostJobForm } from './components/PostJobForm';
@@ -26,7 +28,7 @@ import { BottomNav } from './components/BottomNav';
 import { UserType, UserRole, JobAnnouncement, Course, CourseProposal, Enrollment, TrainerApplication, TrainerStatus } from './types';
 import { supabase } from '../lib/supabase';
 import {
-  getCurrentUser, fetchJobs, fetchProposals, fetchTrainerApplications, fetchEnrollments, fetchCourses, signOutUser, createJob, updateJobStatus, saveProposal, updateProposalStatus, submitTrainerApplication, updateApplicationStatus, signUpUser, createCourse
+  getCurrentUser, fetchJobs, fetchProposals, fetchTrainerApplications, fetchEnrollments, fetchCourses, signOutUser, createJob, updateJobStatus, saveProposal, updateProposalStatus, submitTrainerApplication, updateApplicationStatus, signUpUser, createCourse, applyToJob, withdrawApplication, fetchUserApplications, deleteJob, updateJob, triggerDeadlineReminders, updateUserProfile, uploadProfileImage
 } from '../lib/api';
 
 type Screen =
@@ -51,7 +53,9 @@ type Screen =
   | 'admin-job-approval'
   | 'propose-course'
   | 'post-job'
-  | 'settings';
+  | 'settings'
+  | 'applied'
+  | 'admin-job-history';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('onboarding');
@@ -89,6 +93,7 @@ export default function App() {
   const [trainerApplications, setTrainerApplications] = useState<TrainerApplication[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [appliedJobIds, setAppliedJobIds] = useState<string[]>([]);
 
   const currentScreenRef = useRef<Screen>(currentScreen);
   useEffect(() => {
@@ -105,8 +110,8 @@ export default function App() {
 
     async function loadInitialData() {
       try {
-        const [jobs, proposals, apps, enrolls, dbCourses] = await Promise.all([
-          fetchJobs(), fetchProposals(), fetchTrainerApplications(), fetchEnrollments(), fetchCourses()
+        const [jobs, proposals, apps, enrolls, dbCourses, userApps] = await Promise.all([
+          fetchJobs(), fetchProposals(), fetchTrainerApplications(), fetchEnrollments(), fetchCourses(), fetchUserApplications()
         ]);
         if (!mounted) return;
         setJobAnnouncements(jobs);
@@ -114,6 +119,7 @@ export default function App() {
         setTrainerApplications(apps);
         setEnrollments(enrolls);
         setCourses(dbCourses);
+        setAppliedJobIds(userApps.map((a: any) => a.jobId));
       } catch (err) {
         console.error("Failed to load initial data", err);
       } finally {
@@ -189,7 +195,16 @@ export default function App() {
   }, []);
 
   // Only show approved jobs to regular users and trainers
-  const approvedJobs = jobAnnouncements.filter(j => j.postStatus === 'approved');
+  // Filter approved jobs and exclude expired ones for user-facing pages
+  const allApprovedJobs = jobAnnouncements.filter(j => j.postStatus === 'approved');
+  const approvedJobs = allApprovedJobs.filter(j => {
+    try {
+      const deadline = new Date(j.applicationDeadline);
+      return deadline >= new Date();
+    } catch {
+      return true; // Keep jobs with unparseable dates
+    }
+  });
 
   if (isInitializing) {
     return <div className="flex items-center justify-center h-screen bg-background text-foreground">Loading App Data...</div>;
@@ -249,6 +264,50 @@ export default function App() {
     setSavedItems((prev) =>
       prev.includes(prefixedId) ? prev.filter((item) => item !== prefixedId) : [...prev, prefixedId]
     );
+  };
+
+  const handleApplyToJob = async (jobId: string) => {
+    try {
+      await applyToJob(jobId, userEmail, userName);
+      setAppliedJobIds(prev => [...prev, jobId]);
+      toast.success('Application submitted successfully!');
+    } catch (err: any) {
+      if (err.message?.includes('duplicate')) {
+        toast.info('You have already applied to this job.');
+      } else {
+        toast.error('Failed to apply: ' + err.message);
+      }
+    }
+  };
+
+  const handleWithdrawApplication = async (jobId: string) => {
+    try {
+      await withdrawApplication(jobId);
+      setAppliedJobIds(prev => prev.filter(id => id !== jobId));
+      toast.success('Application withdrawn.');
+    } catch (err: any) {
+      toast.error('Failed to withdraw: ' + err.message);
+    }
+  };
+
+  const handleDeleteJob = async (jobId: string) => {
+    try {
+      await deleteJob(jobId);
+      setJobAnnouncements(prev => prev.filter(j => j.id !== jobId));
+      toast.success('Job deleted successfully.');
+    } catch (err: any) {
+      toast.error('Failed to delete job: ' + err.message);
+    }
+  };
+
+  const handleUpdateJob = async (jobId: string, updates: Partial<JobAnnouncement>) => {
+    try {
+      const updated = await updateJob(jobId, updates);
+      setJobAnnouncements(prev => prev.map(j => j.id === jobId ? updated : j));
+      toast.success('Job updated successfully.');
+    } catch (err: any) {
+      toast.error('Failed to update job: ' + err.message);
+    }
   };
 
   const handleJobClick = (job: JobAnnouncement) => {
@@ -338,11 +397,14 @@ export default function App() {
     } catch (err: any) { toast.error('Error: ' + err.message); }
   };
 
-  const savedJobs = approvedJobs.filter((job) =>
+  const savedJobs = allApprovedJobs.filter((job) =>
     savedItems.includes(`job:${job.id}`)
   );
   const savedCourses = courses.filter((course) =>
     savedItems.includes(`course:${course.id}`)
+  );
+  const appliedJobs = allApprovedJobs.filter((job) =>
+    appliedJobIds.includes(job.id)
   );
 
   const renderScreen = () => {
@@ -462,12 +524,16 @@ export default function App() {
               userType={userType}
               profileImage={profileImage}
               savedItemsCount={savedItems.length}
+              appliedJobsCount={appliedJobIds.length}
               coursesCount={enrollments.filter(e => e.studentEmail === userEmail).length}
               onUpgrade={handleUpgradeClick}
               onLogout={handleLogout}
               onSavedClick={() => {
                 setActiveTab('saved');
                 setCurrentScreen('saved');
+              }}
+              onAppliedClick={() => {
+                setCurrentScreen('applied');
               }}
               onCoursesClick={() => {
                 setActiveTab('courses');
@@ -511,6 +577,8 @@ export default function App() {
             onCourseClick={handleCourseClick}
             isSaved={savedItems.includes(`job:${selectedJob.id}`)}
             onSaveToggle={() => handleSaveToggle(selectedJob.id, 'job')}
+            isApplied={appliedJobIds.includes(selectedJob.id)}
+            onApply={() => handleApplyToJob(selectedJob.id)}
           />
         ) : null;
 
@@ -648,6 +716,26 @@ export default function App() {
             onPostJob={() => {
               setCurrentScreen('post-job');
             }}
+            onNavigateToJobHistory={() => {
+              setCurrentScreen('admin-job-history');
+            }}
+            onSendReminders={async () => {
+              try {
+                const result = await triggerDeadlineReminders();
+                if (result.emailsSent > 0) {
+                  toast.success(`Sent ${result.emailsSent} reminder email(s)!`);
+                } else {
+                  toast.info(result.message || 'No reminders to send right now.');
+                  if (result.debug) {
+                    alert(`DEBUG INFO:\nJobs Found: ${result.debug.jobsFound}\nApplications Found: ${result.debug.applicationsFound}\nFailures: ${result.debug.emailFailures.join(', ')}`);
+                  }
+                }
+                return result;
+              } catch (err: any) {
+                toast.error('Failed to send reminders: ' + err.message);
+                return { emailsSent: 0 };
+              }
+            }}
           />
         );
 
@@ -660,6 +748,29 @@ export default function App() {
             }}
             onApprove={handleApproveJob}
             onReject={handleRejectJob}
+          />
+        );
+
+      case 'admin-job-history':
+        return (
+          <AdminJobHistoryScreen
+            jobs={jobAnnouncements}
+            onBack={() => setCurrentScreen('admin-trainer-approval')}
+            onDeleteJob={handleDeleteJob}
+            onUpdateJob={handleUpdateJob}
+          />
+        );
+
+      case 'applied':
+        return (
+          <AppliedScreen
+            appliedJobs={appliedJobs}
+            onJobClick={handleJobClick}
+            onWithdraw={handleWithdrawApplication}
+            onBack={() => {
+              setCurrentScreen('profile');
+              setActiveTab('profile');
+            }}
           />
         );
 

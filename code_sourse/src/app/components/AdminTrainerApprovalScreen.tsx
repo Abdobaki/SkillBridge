@@ -15,6 +15,9 @@ import {
   BookOpen,
   PlusCircle,
   LogOut,
+  History,
+  Bell,
+  Loader2,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -29,6 +32,8 @@ interface AdminTrainerApprovalScreenProps {
   onNavigateToCourseApproval?: () => void;
   onNavigateToJobApproval?: () => void;
   onPostJob?: () => void;
+  onNavigateToJobHistory?: () => void;
+  onSendReminders?: () => Promise<{ emailsSent: number }>;
   onLogout?: () => void;
 }
 
@@ -40,11 +45,14 @@ export function AdminTrainerApprovalScreen({
   onNavigateToCourseApproval,
   onNavigateToJobApproval,
   onPostJob,
+  onNavigateToJobHistory,
+  onSendReminders,
   onLogout,
 }: AdminTrainerApprovalScreenProps) {
   const [selectedApplication, setSelectedApplication] = useState<TrainerApplication | null>(null);
   const [rejectionFeedback, setRejectionFeedback] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [isSendingReminders, setIsSendingReminders] = useState(false);
 
   const pendingApplications = applications.filter((a) => a.status === 'pending');
   const approvedApplications = applications.filter((a) => a.status === 'approved');
@@ -133,6 +141,40 @@ export function AdminTrainerApprovalScreen({
           >
             <PlusCircle className="w-4 h-4 mr-2" />
             Post Job
+          </Button>
+        )}
+        {onNavigateToJobHistory && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onNavigateToJobHistory}
+            className="shrink-0"
+          >
+            <History className="w-4 h-4 mr-2" />
+            Job History
+          </Button>
+        )}
+        {onSendReminders && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              setIsSendingReminders(true);
+              try {
+                await onSendReminders();
+              } finally {
+                setIsSendingReminders(false);
+              }
+            }}
+            disabled={isSendingReminders}
+            className="shrink-0"
+          >
+            {isSendingReminders ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Bell className="w-4 h-4 mr-2" />
+            )}
+            {isSendingReminders ? 'Sending...' : 'Send Reminders'}
           </Button>
         )}
       </div>

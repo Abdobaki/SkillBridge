@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Build artifacts
+build_output.txt
+
+# Android build output (Capacitor)
+android/.gradle
+android/app/build
+android/build

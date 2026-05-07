@@ -147,6 +147,7 @@ export function LoginScreen({ onComplete, onBack, onSignUp }: LoginScreenProps) 
                       await signInWithGoogle();
                     } catch (err: any) {
                       setError(err.message || 'Failed to initialize Google Login');
+                    } finally {
                       setIsLoading(false);
                     }
                   }}
