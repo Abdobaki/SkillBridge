@@ -25,6 +25,7 @@ dist-ssr
 
 # Build artifacts
 build_output.txt
+*.apk
 
 # Android build output (Capacitor)
 android/.gradle
