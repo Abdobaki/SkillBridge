@@ -25,10 +25,11 @@ import { TrainerJobBrowseScreen } from './components/TrainerJobBrowseScreen';
 import { PostJobForm } from './components/PostJobForm';
 import { SettingsScreen } from './components/SettingsScreen';
 import { BottomNav } from './components/BottomNav';
+import { CourseChatScreen } from './components/CourseChatScreen';
 import { UserType, UserRole, JobAnnouncement, Course, CourseProposal, Enrollment, TrainerApplication, TrainerStatus } from './types';
 import { supabase } from '../lib/supabase';
 import {
-  getCurrentUser, fetchJobs, fetchProposals, fetchTrainerApplications, fetchEnrollments, fetchCourses, signOutUser, createJob, updateJobStatus, saveProposal, updateProposalStatus, submitTrainerApplication, updateApplicationStatus, signUpUser, createCourse, applyToJob, withdrawApplication, fetchUserApplications, deleteJob, updateJob, triggerDeadlineReminders, updateUserProfile, uploadProfileImage
+  getCurrentUser, fetchJobs, fetchProposals, fetchTrainerApplications, fetchEnrollments, fetchCourses, signOutUser, createJob, updateJobStatus, saveProposal, updateProposalStatus, submitTrainerApplication, updateApplicationStatus, signUpUser, createCourse, applyToJob, withdrawApplication, fetchUserApplications, deleteJob, updateJob, triggerDeadlineReminders, updateUserProfile, uploadProfileImage, joinCourse, leaveCourse, triggerNotification
 } from '../lib/api';
 
 type Screen =
@@ -55,7 +56,8 @@ type Screen =
   | 'post-job'
   | 'settings'
   | 'applied'
-  | 'admin-job-history';
+  | 'admin-job-history'
+  | 'course-chat';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('onboarding');
@@ -94,6 +96,7 @@ export default function App() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [isInitializing, setIsInitializing] = useState(true);
   const [appliedJobIds, setAppliedJobIds] = useState<string[]>([]);
+  const [selectedChatCourseId, setSelectedChatCourseId] = useState<string | null>(null);
 
   const currentScreenRef = useRef<Screen>(currentScreen);
   useEffect(() => {
@@ -364,6 +367,13 @@ export default function App() {
       setJobAnnouncements([savedJob, ...jobAnnouncements]);
       if (savedJob.postStatus === 'approved') {
         toast.success('Job announcement published successfully!');
+        // Fire email notification to all opted-in users (best-effort)
+        triggerNotification('new_job', {
+          jobTitle: savedJob.title,
+          company: savedJob.company,
+          location: savedJob.location,
+          deadline: savedJob.applicationDeadline,
+        }).catch(() => {});
       } else {
         toast.success('Job announcement submitted for admin review!');
       }
@@ -386,6 +396,13 @@ export default function App() {
       const updatedJob = await updateJobStatus(jobId, 'approved');
       setJobAnnouncements(jobAnnouncements.map((j) => (j.id === jobId ? updatedJob : j)));
       toast.success('Job announcement approved and published!');
+      // Fire new_job notification to opted-in users (best-effort)
+      triggerNotification('new_job', {
+        jobTitle: updatedJob.title,
+        company: updatedJob.company,
+        location: updatedJob.location,
+        deadline: updatedJob.applicationDeadline,
+      }).catch(() => {});
     } catch (err: any) { toast.error('Error: ' + err.message); }
   };
 
@@ -583,26 +600,85 @@ export default function App() {
         ) : null;
 
       case 'course-detail':
-        return selectedCourse ? (
-          <CourseDetailScreen
-            course={selectedCourse}
-            onBack={() => {
-              setCurrentScreen(activeTab as Screen);
-            }}
-            isSaved={savedItems.includes(`course:${selectedCourse.id}`)}
-            onSaveToggle={() => handleSaveToggle(selectedCourse.id, 'course')}
-          />
-        ) : null;
+        return selectedCourse ? (() => {
+          // Find current user's enrollment for this course
+          const currentEnrollment = enrollments.find(
+            (e) => e.courseId === selectedCourse.id && e.studentEmail === userEmail
+          ) || null;
+          return (
+            <CourseDetailScreen
+              course={selectedCourse}
+              onBack={() => setCurrentScreen(activeTab as Screen)}
+              isSaved={savedItems.includes(`course:${selectedCourse.id}`)}
+              onSaveToggle={() => handleSaveToggle(selectedCourse.id, 'course')}
+              enrollment={currentEnrollment}
+              onJoinCourse={async () => {
+                const newEnrollment = await joinCourse(
+                  selectedCourse.id,
+                  selectedCourse.title,
+                  userName,
+                  userEmail
+                );
+                setEnrollments((prev) => [...prev, newEnrollment]);
+                // Update enrolled count locally
+                setCourses((prev) =>
+                  prev.map((c) =>
+                    c.id === selectedCourse.id
+                      ? { ...c, enrolled: c.enrolled + 1 }
+                      : c
+                  )
+                );
+                setSelectedCourse({ ...selectedCourse, enrolled: selectedCourse.enrolled + 1 });
+              }}
+              onLeaveCourse={async () => {
+                if (!currentEnrollment) return;
+                await leaveCourse(currentEnrollment.id, selectedCourse.id);
+                setEnrollments((prev) =>
+                  prev.filter((e) => e.id !== currentEnrollment.id)
+                );
+                setCourses((prev) =>
+                  prev.map((c) =>
+                    c.id === selectedCourse.id
+                      ? { ...c, enrolled: Math.max(0, c.enrolled - 1) }
+                      : c
+                  )
+                );
+                setSelectedCourse({ ...selectedCourse, enrolled: Math.max(0, selectedCourse.enrolled - 1) });
+              }}
+              onOpenChat={() => {
+                setSelectedChatCourseId(selectedCourse.id);
+                setCurrentScreen('course-chat');
+              }}
+            />
+          );
+        })() : null;
 
       case 'subscription':
         return (
           <SubscriptionScreen
-            onBack={() => {
-              setCurrentScreen(activeTab as Screen);
-            }}
+            onBack={() => setCurrentScreen(activeTab as Screen)}
             onSubscribe={handleSubscribe}
           />
         );
+
+      case 'course-chat': {
+        const chatCourse = courses.find((c) => c.id === selectedChatCourseId) ||
+          (selectedCourse?.id === selectedChatCourseId ? selectedCourse : null);
+        const enrolledInCourse = enrollments.filter(
+          (e) => e.courseId === selectedChatCourseId
+        ).length;
+        return chatCourse ? (
+          <CourseChatScreen
+            courseId={chatCourse.id}
+            courseTitle={chatCourse.title}
+            userEmail={userEmail}
+            userName={userName}
+            isInstructor={userRole === 'trainer' && chatCourse.instructor === userName}
+            enrolledCount={enrolledInCourse}
+            onBack={() => setCurrentScreen('course-detail')}
+          />
+        ) : null;
+      }
 
       case 'trainer-dashboard':
         return (

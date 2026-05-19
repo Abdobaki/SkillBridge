@@ -58,7 +58,7 @@ export function ProfileScreen({
     },
     {
       icon: Bookmark,
-      label: 'Saved',
+      label: 'Favorites',
       badge: savedItemsCount.toString(),
       color: 'text-accent-orange',
       onClick: onSavedClick,

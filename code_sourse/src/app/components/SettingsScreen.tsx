@@ -17,7 +17,7 @@ import {
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Switch } from './ui/switch';
-import { changePassword } from '../../lib/api';
+import { changePassword, saveNotificationPrefs } from '../../lib/api';
 import { toast } from 'sonner';
 
 interface SettingsScreenProps {
@@ -110,6 +110,8 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
     const updated = { ...notifications, [key]: value };
     setNotifications(updated);
     localStorage.setItem('notificationPrefs', JSON.stringify(updated));
+    // Also persist to Supabase so the edge function can check it
+    saveNotificationPrefs(updated);
   };
 
   return (

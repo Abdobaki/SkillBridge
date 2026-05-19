@@ -27,14 +27,14 @@ export function SavedScreen({
     <div className="flex-1 min-h-0 flex flex-col bg-background">
       {/* Header */}
       <div className="px-6 pt-12 pb-4 bg-card border-b border-border">
-        <h2 className="text-2xl text-foreground mb-4">Saved Items</h2>
+        <h2 className="text-2xl text-foreground mb-4">Favorites</h2>
 
         {/* Search Bar */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Search saved items..."
+            placeholder="Search favorites..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 h-11 bg-input-background"
@@ -59,9 +59,9 @@ export function SavedScreen({
           {savedJobs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Bookmark className="w-16 h-16 text-muted-foreground mb-4" />
-              <h4 className="text-foreground mb-2">No saved jobs</h4>
+              <h4 className="text-foreground mb-2">No favorite jobs</h4>
               <p className="text-sm text-muted-foreground text-center">
-                Jobs you save will appear here
+                Jobs you favorite will appear here
               </p>
             </div>
           ) : (
@@ -108,9 +108,9 @@ export function SavedScreen({
           {savedCourses.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Bookmark className="w-16 h-16 text-muted-foreground mb-4" />
-              <h4 className="text-foreground mb-2">No saved courses</h4>
+              <h4 className="text-foreground mb-2">No favorite courses</h4>
               <p className="text-sm text-muted-foreground text-center">
-                Courses you save will appear here
+                Courses you favorite will appear here
               </p>
             </div>
           ) : (

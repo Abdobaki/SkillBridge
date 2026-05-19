@@ -10,7 +10,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
     { id: 'home', icon: Home, label: 'Home' },
     { id: 'explore', icon: Search, label: 'Explore' },
     { id: 'courses', icon: BookOpen, label: 'Courses' },
-    { id: 'saved', icon: Bookmark, label: 'Saved' },
+    { id: 'saved', icon: Bookmark, label: 'Favorites' },
     { id: 'profile', icon: User, label: 'Profile' },
   ];
 

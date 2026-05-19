@@ -90,7 +90,6 @@ export interface CourseProposal {
 export interface Enrollment {
   id: string;
   courseId: string;
-  courseTitle: string;
   studentName: string;
   studentEmail: string;
   enrolledDate: string;
