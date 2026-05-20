@@ -100,7 +100,7 @@ export function ExploreScreen({
   });
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-background overflow-hidden">
+    <div className="flex-1 min-h-0 flex flex-col bg-background">
       {/* Header */}
       <div className="px-6 pt-12 pb-4 bg-card border-b border-border">
         <h2 className="text-2xl text-foreground mb-4">Explore</h2>
@@ -211,7 +211,7 @@ export function ExploreScreen({
       )}
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col">
         <div className="px-6 pt-4 border-b border-border">
           <TabsList className="w-full grid grid-cols-2 h-11">
             <TabsTrigger value="announcements">Announcements</TabsTrigger>
@@ -219,7 +219,7 @@ export function ExploreScreen({
           </TabsList>
         </div>
 
-        <TabsContent value="announcements" className="flex-1 overflow-y-auto px-6 pt-4 pb-20 mt-0">
+        <TabsContent value="announcements" className="flex-1 min-h-0 overflow-y-auto px-6 pt-4 pb-20 mt-0">
           {filteredJobs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Briefcase className="w-12 h-12 text-muted-foreground mb-3" />
@@ -323,7 +323,7 @@ export function ExploreScreen({
           )}
         </TabsContent>
 
-        <TabsContent value="courses" className="flex-1 overflow-y-auto px-6 pt-4 pb-20 mt-0">
+        <TabsContent value="courses" className="flex-1 min-h-0 overflow-y-auto px-6 pt-4 pb-20 mt-0">
           {filteredCourses.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <BookOpen className="w-12 h-12 text-muted-foreground mb-3" />
