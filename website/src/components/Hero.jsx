@@ -10,12 +10,7 @@ export default function Hero() {
       <div className="relative z-10 max-w-4xl mx-auto px-6 py-32 text-center">
 
         {/* Trust badge */}
-        <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-full px-4 py-2 mb-8 shadow-sm animate-fadeInUp">
-          <svg className="w-4 h-4 text-amber-400 fill-amber-400" viewBox="0 0 24 24">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-          </svg>
-          <span className="text-sm font-medium text-slate-600">Trusted by thousands of professionals</span>
-        </div>
+    
 
         {/* Heading */}
         <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 leading-tight mb-6 animate-fadeInUp">

@@ -59,64 +59,14 @@ export default function Download() {
               {/* Glow */}
               <div className="absolute inset-0 bg-teal-200/40 rounded-[3rem] blur-3xl scale-110 pointer-events-none" />
 
-              {/* Phone frame */}
-              <div className="relative w-64 h-[520px] bg-slate-900 rounded-[3rem] shadow-2xl p-3 border-4 border-slate-800">
-                {/* Screen */}
-                <div className="w-full h-full bg-gradient-to-br from-teal-50 to-blue-50 rounded-[2.5rem] overflow-hidden flex flex-col">
-                  {/* Status bar */}
-                  <div className="bg-teal-600 px-5 pt-8 pb-4 text-center">
-                    <div className="w-16 h-1 bg-white/30 rounded-full mx-auto mb-3" />
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                      <span className="text-white font-bold text-sm">SkillBridge</span>
-                    </div>
-                  </div>
-
-                  {/* App content preview */}
-                  <div className="flex-1 p-3 space-y-2.5">
-                    <p className="text-xs font-bold text-slate-700 px-1">Latest Jobs</p>
-                    {[
-                      { title: 'Frontend Developer', co: 'Tech Corp', cat: 'IT' },
-                      { title: 'Data Analyst', co: 'Analytics Co', cat: 'Data Science' },
-                      { title: 'Civil Engineer', co: 'BuildPro', cat: 'Engineering' },
-                    ].map(job => (
-                      <div key={job.title} className="bg-white rounded-xl p-2.5 shadow-sm border border-slate-100">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 bg-teal-100 rounded-lg flex items-center justify-center">
-                            <svg className="w-3.5 h-3.5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01" />
-                            </svg>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-slate-900 truncate">{job.title}</p>
-                            <p className="text-[10px] text-slate-400">{job.co}</p>
-                          </div>
-                          <span className="text-[9px] bg-teal-50 text-teal-700 px-1.5 py-0.5 rounded-full font-medium">{job.cat}</span>
-                        </div>
-                      </div>
-                    ))}
-                    <p className="text-xs font-bold text-slate-700 px-1 pt-1">Courses</p>
-                    <div className="bg-gradient-to-r from-teal-500 to-emerald-500 rounded-xl p-3 text-white">
-                      <p className="text-xs font-bold">Web Development Bootcamp</p>
-                      <p className="text-[10px] opacity-80 mt-0.5">by John Doe · 8 weeks</p>
-                      <div className="mt-2 h-1 bg-white/30 rounded-full">
-                        <div className="h-full w-2/3 bg-white rounded-full" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bottom nav */}
-                  <div className="bg-white border-t border-slate-100 px-4 py-2 flex justify-around">
-                    {['🏠', '🔍', '📚', '👤'].map(icon => (
-                      <div key={icon} className="text-lg">{icon}</div>
-                    ))}
-                  </div>
+              {/* Phone frame with screenshot */}
+              <div className="relative w-64 bg-slate-900 rounded-[3rem] shadow-2xl p-3 border-4 border-slate-800">
+                <div className="w-full rounded-[2.5rem] overflow-hidden">
+                  <img
+                    src="/main_screen.jpg"
+                    alt="SkillBridge app screenshot"
+                    className="w-full h-auto"
+                  />
                 </div>
               </div>
             </div>

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import { Users, Briefcase, BookOpen, Star } from 'lucide-react';
 
 const stats = [
-  { value: 500, suffix: '+', label: 'Professionals Joined', icon: '👥' },
-  { value: 50, suffix: '+', label: 'Verified Job Listings', icon: '💼' },
-  { value: 20, suffix: '+', label: 'Expert Courses', icon: '📚' },
-  { value: 95, suffix: '%', label: 'User Satisfaction', icon: '⭐' },
+  { value: 500, suffix: '+', label: 'Professionals Joined', icon: Users },
+  { value: 50, suffix: '+', label: 'Verified Job Listings', icon: Briefcase },
+  { value: 20, suffix: '+', label: 'Expert Courses', icon: BookOpen },
+  { value: 95, suffix: '%', label: 'User Satisfaction', icon: Star },
 ];
 
 function useCountUp(target, isVisible) {
@@ -44,7 +45,9 @@ function StatCard({ stat }) {
 
   return (
     <div ref={ref} className="bg-white rounded-2xl p-8 text-center shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
-      <div className="text-4xl mb-3">{stat.icon}</div>
+      <div className="mb-3 flex justify-center">
+        <stat.icon size={36} className="text-teal-600" />
+      </div>
       <div className="text-5xl font-black text-slate-900 mb-1">
         {count}{stat.suffix}
       </div>

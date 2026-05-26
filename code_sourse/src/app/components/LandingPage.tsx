@@ -163,10 +163,7 @@ export function LandingPage({ onGetStarted, onLogin }: LandingPageProps) {
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-[#0B3C5D]/10 text-[#0B3C5D] px-4 py-2 rounded-full text-sm font-medium mb-8">
-              <Star className="w-4 h-4" />
-              <span>Trusted by thousands of professionals</span>
-            </div>
+            
 
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-foreground leading-tight mb-6 tracking-tight">
               Bridge the Gap Between{' '}
