@@ -63,7 +63,7 @@ export default function Download() {
               <div className="relative w-64 bg-slate-900 rounded-[3rem] shadow-2xl p-3 border-4 border-slate-800">
                 <div className="w-full rounded-[2.5rem] overflow-hidden">
                   <img
-                    src="/main_screen.jpg"
+                    src={`${import.meta.env.BASE_URL}main_screen.jpg`}
                     alt="SkillBridge app screenshot"
                     className="w-full h-auto"
                   />
