@@ -1,0 +1,11 @@
+{
+  "name": "skillbridge-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix code_sourse run dev",
+    "build": "npm --prefix code_sourse run build",
+    "dev:website": "npm --prefix website run dev",
+    "build:website": "npm --prefix website run build"
+  }
+}

@@ -128,3 +128,102 @@ export interface Category {
   name: string;
   icon: string;
 }
+
+export type PostType =
+  | 'project'
+  | 'portfolio'
+  | 'certificate'
+  | 'achievement'
+  | 'internship'
+  | 'job'
+  | 'promotion'
+  | 'announcement'
+  | 'hackathon'
+  | 'article'
+  | 'advice'
+  | 'question'
+  | 'contribution'
+  | 'general';
+
+export interface Company {
+  id: string;
+  name: string;
+  logoUrl?: string;
+  coverUrl?: string;
+  description?: string;
+  industry?: string;
+  website?: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  size?: string;
+  foundedDate?: string;
+  socialLinks?: Record<string, string>;
+  verified?: boolean;
+  verificationType?: 'company' | 'startup' | 'none';
+  createdAt?: string;
+}
+
+export interface Post {
+  id: string;
+  userId?: string;
+  companyId?: string;
+  content: string;
+  mediaUrls: string[];
+  attachmentUrls: string[];
+  hashtags: string[];
+  likesCount: number;
+  commentsCount: number;
+  sharesCount: number;
+  createdAt: string;
+  updatedAt: string;
+  
+  // Joined relation metadata
+  user?: {
+    id: string;
+    name: string;
+    profileImage?: string;
+    profession?: string;
+    verified?: boolean;
+  };
+  company?: {
+    id: string;
+    name: string;
+    logoUrl?: string;
+    verified?: boolean;
+  };
+  hasLiked?: boolean;
+  hasSaved?: boolean;
+  isFollowingAuthor?: boolean;
+}
+
+export interface PostComment {
+  id: string;
+  postId: string;
+  userId?: string;
+  companyId?: string;
+  content: string;
+  parentId?: string;
+  createdAt: string;
+  
+  // Joined relation metadata
+  user?: {
+    id: string;
+    name: string;
+    profileImage?: string;
+  };
+  company?: {
+    id: string;
+    name: string;
+    logoUrl?: string;
+  };
+  replies?: PostComment[];
+}
+
+export interface Follow {
+  id: string;
+  followerId: string;
+  followingUserId?: string;
+  followingCompanyId?: string;
+  createdAt: string;
+}
