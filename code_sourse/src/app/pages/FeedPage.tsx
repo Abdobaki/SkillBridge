@@ -117,13 +117,22 @@ export function FeedPage() {
               Algiers professional community
             </p>
           </div>
-          <button
-            onClick={() => setIsCreateOpen(true)}
-            className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center hover:bg-primary-foreground/30 transition-all active:scale-95"
-            title="Create Post"
-          >
-            <PlusCircle className="w-5.5 h-5.5 text-primary-foreground" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/chats')}
+              className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center hover:bg-primary-foreground/30 transition-all active:scale-95"
+              title="Direct Messages"
+            >
+              <MessageSquare className="w-5 h-5 text-primary-foreground" />
+            </button>
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center hover:bg-primary-foreground/30 transition-all active:scale-95"
+              title="Create Post"
+            >
+              <PlusCircle className="w-5.5 h-5.5 text-primary-foreground" />
+            </button>
+          </div>
         </div>
       </div>
 

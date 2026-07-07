@@ -55,6 +55,10 @@ export function ExploreScreen({
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     initialCategory ? [initialCategory] : []
   );
+  
+  // Advanced filter states
+  const [selectedWorkplaces, setSelectedWorkplaces] = useState<string[]>([]);
+  const [selectedExperienceLevels, setSelectedExperienceLevels] = useState<string[]>([]);
 
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
@@ -64,11 +68,29 @@ export function ExploreScreen({
     );
   };
 
-  const clearFilters = () => {
-    setSelectedCategories([]);
+  const toggleWorkplace = (workplace: string) => {
+    setSelectedWorkplaces((prev) =>
+      prev.includes(workplace)
+        ? prev.filter((w) => w !== workplace)
+        : [...prev, workplace]
+    );
   };
 
-  // Filter jobs by search query AND selected categories
+  const toggleExperienceLevel = (exp: string) => {
+    setSelectedExperienceLevels((prev) =>
+      prev.includes(exp)
+        ? prev.filter((x) => x !== exp)
+        : [...prev, exp]
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedCategories([]);
+    setSelectedWorkplaces([]);
+    setSelectedExperienceLevels([]);
+  };
+
+  // Filter jobs by search query, categories, workplace, and experience
   const filteredJobs = jobs.filter((job) => {
     const matchesSearch =
       searchQuery === '' ||
@@ -81,7 +103,25 @@ export function ExploreScreen({
       selectedCategories.length === 0 ||
       selectedCategories.includes(job.category);
 
-    return matchesSearch && matchesCategory;
+    const matchesWorkplace = selectedWorkplaces.length === 0 || selectedWorkplaces.some(w => {
+      const loc = job.location.toLowerCase();
+      if (w === 'Remote') return loc.includes('remote');
+      if (w === 'Hybrid') return loc.includes('hybrid');
+      return !loc.includes('remote') && !loc.includes('hybrid');
+    });
+
+    const matchesExperience = selectedExperienceLevels.length === 0 || selectedExperienceLevels.some(exp => {
+      const title = job.title.toLowerCase();
+      const desc = job.description.toLowerCase();
+      const isSenior = title.includes('senior') || title.includes('lead') || title.includes('architect') || title.includes('director') || desc.includes('senior level');
+      const isEntry = title.includes('junior') || title.includes('intern') || title.includes('entry') || desc.includes('entry level');
+      
+      if (exp === 'Entry Level') return isEntry;
+      if (exp === 'Director/Executive') return isSenior;
+      return !isEntry && !isSenior;
+    });
+
+    return matchesSearch && matchesCategory && matchesWorkplace && matchesExperience;
   });
 
   // Filter courses by search query AND selected categories
@@ -128,15 +168,37 @@ export function ExploreScreen({
         </div>
 
         {/* Active filter count */}
-        {selectedCategories.length > 0 && !showFilters && (
+        {(selectedCategories.length > 0 || selectedWorkplaces.length > 0 || selectedExperienceLevels.length > 0) && !showFilters && (
           <div className="flex items-center gap-2 mt-3">
             <span className="text-xs text-muted-foreground">Filters:</span>
             <div className="flex gap-1.5 overflow-x-auto scrollbar-hide flex-1">
+              {selectedWorkplaces.map((w) => (
+                <Badge
+                  key={w}
+                  variant="secondary"
+                  className="bg-primary/15 text-primary border-0 whitespace-nowrap text-[10px] cursor-pointer hover:bg-primary/20"
+                  onClick={() => toggleWorkplace(w)}
+                >
+                  {w}
+                  <X className="w-3 h-3 ml-1" />
+                </Badge>
+              ))}
+              {selectedExperienceLevels.map((exp) => (
+                <Badge
+                  key={exp}
+                  variant="secondary"
+                  className="bg-primary/15 text-primary border-0 whitespace-nowrap text-[10px] cursor-pointer hover:bg-primary/20"
+                  onClick={() => toggleExperienceLevel(exp)}
+                >
+                  {exp}
+                  <X className="w-3 h-3 ml-1" />
+                </Badge>
+              ))}
               {selectedCategories.map((cat) => (
                 <Badge
                   key={cat}
                   variant="secondary"
-                  className="bg-primary/10 text-primary border-0 whitespace-nowrap text-xs cursor-pointer hover:bg-primary/20"
+                  className="bg-primary/10 text-primary border-0 whitespace-nowrap text-[10px] cursor-pointer hover:bg-primary/20"
                   onClick={() => toggleCategory(cat)}
                 >
                   {cat}
@@ -146,7 +208,7 @@ export function ExploreScreen({
             </div>
             <button
               onClick={clearFilters}
-              className="text-xs text-destructive whitespace-nowrap"
+              className="text-xs text-destructive whitespace-nowrap font-bold"
             >
               Clear all
             </button>
@@ -156,56 +218,104 @@ export function ExploreScreen({
 
       {/* Filter Panel */}
       {showFilters && (
-        <div className="px-6 py-4 bg-card border-b border-border">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm text-foreground font-medium">Filter by Category</h3>
+        <div className="px-6 py-4 bg-card border-b border-border space-y-4 max-h-[60vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm text-foreground font-bold">Filters</h3>
             <div className="flex items-center gap-3">
-              {selectedCategories.length > 0 && (
+              {(selectedCategories.length > 0 || selectedWorkplaces.length > 0 || selectedExperienceLevels.length > 0) && (
                 <button
                   onClick={clearFilters}
-                  className="text-xs text-destructive"
+                  className="text-xs text-destructive font-semibold hover:underline"
                 >
                   Clear all
                 </button>
               )}
               <button
                 onClick={() => setShowFilters(false)}
-                className="p-1 rounded-lg hover:bg-muted"
+                className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
               >
-                <X className="w-4 h-4 text-muted-foreground" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {JOB_CATEGORIES.map((category) => {
-              const isSelected = selectedCategories.includes(category);
-              return (
-                <button
-                  key={category}
-                  onClick={() => toggleCategory(category)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
-                    isSelected
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
-                  }`}
-                >
-                  {isSelected && <Check className="w-3 h-3" />}
-                  {category}
-                </button>
-              );
-            })}
+
+          {/* Workplace section */}
+          <div className="space-y-2">
+            <h4 className="text-[10px] font-bold text-muted-foreground uppercase">Workplace Type</h4>
+            <div className="flex flex-wrap gap-2">
+              {['Remote', 'Hybrid', 'Onsite'].map((w) => {
+                const isSel = selectedWorkplaces.includes(w);
+                return (
+                  <button
+                    key={w}
+                    onClick={() => toggleWorkplace(w)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                      isSel 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {w}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          {selectedCategories.length > 0 && (
-            <p className="text-xs text-muted-foreground mt-3">
-              {selectedCategories.length} categor{selectedCategories.length === 1 ? 'y' : 'ies'} selected
-            </p>
-          )}
+
+          {/* Experience level section */}
+          <div className="space-y-2">
+            <h4 className="text-[10px] font-bold text-muted-foreground uppercase">Experience Level</h4>
+            <div className="flex flex-wrap gap-2">
+              {['Entry Level', 'Mid-Senior Level', 'Director/Executive'].map((exp) => {
+                const isSel = selectedExperienceLevels.includes(exp);
+                return (
+                  <button
+                    key={exp}
+                    onClick={() => toggleExperienceLevel(exp)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                      isSel 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {exp}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Categories section */}
+          <div className="space-y-2">
+            <h4 className="text-[10px] font-bold text-muted-foreground uppercase">Category</h4>
+            <div className="flex flex-wrap gap-1.5">
+              {JOB_CATEGORIES.map((category) => {
+                const isSelected = selectedCategories.includes(category);
+                return (
+                  <button
+                    key={category}
+                    onClick={() => toggleCategory(category)}
+                    className={`px-2.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+                      isSelected
+                        ? 'bg-primary/20 text-primary border border-primary/20'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {category}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Action button */}
           <Button
             onClick={() => setShowFilters(false)}
-            className="w-full mt-4 bg-primary text-primary-foreground hover:bg-primary/90"
+            className="w-full mt-4 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full h-10 text-xs font-bold flex items-center justify-center gap-1.5"
           >
-            <Search className="w-4 h-4 mr-2" />
-            Search{selectedCategories.length > 0 ? ` (${selectedCategories.length} filters)` : ''}
+            <Search className="w-4 h-4" />
+            <span>Apply Filters ({selectedCategories.length + selectedWorkplaces.length + selectedExperienceLevels.length})</span>
           </Button>
         </div>
       )}

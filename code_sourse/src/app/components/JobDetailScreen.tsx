@@ -16,6 +16,8 @@ interface JobDetailScreenProps {
   onSaveToggle?: () => void;
   isApplied?: boolean;
   onApply?: () => void;
+  matchScore?: number;
+  matchedSkills?: string[];
 }
 
 export function JobDetailScreen({ 
@@ -31,6 +33,8 @@ export function JobDetailScreen({
   onSaveToggle,
   isApplied,
   onApply,
+  matchScore,
+  matchedSkills = [],
 }: JobDetailScreenProps) {
   const isLocked = userType === 'free' && userRole !== 'trainer'; // Trainers can see everything
   const isTrainer = userRole === 'trainer';
@@ -108,6 +112,44 @@ export function JobDetailScreen({
               </div>
             </div>
           </div>
+
+          {/* Match Score Widget */}
+          {!isLocked && typeof matchScore === 'number' && (
+            <div className="mb-8 p-5 bg-muted/20 border border-border/80 rounded-2xl shadow-sm">
+              <div className="flex items-center gap-3.5 mb-3.5">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-sm ${
+                  matchScore >= 75 
+                    ? 'bg-emerald-500' 
+                    : matchScore >= 45 
+                      ? 'bg-amber-500' 
+                      : 'bg-muted-foreground/65'
+                }`}>
+                  {matchScore}%
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-foreground">Skills Compatibility Match</h4>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">
+                    Based on overlaps between your professional experience, projects, and job specifications.
+                  </p>
+                </div>
+              </div>
+
+              {matchedSkills && matchedSkills.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase">Matched Capabilities</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {matchedSkills.map((skill) => (
+                      <Badge key={skill} variant="secondary" className="bg-primary/10 text-primary border-0 text-[10px] py-0.5">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-muted-foreground italic">No matching keywords detected in profile.</p>
+              )}
+            </div>
+          )}
 
           {/* Description */}
           <div className="mb-8">

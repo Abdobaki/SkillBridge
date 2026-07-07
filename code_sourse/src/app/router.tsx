@@ -41,6 +41,11 @@ import { FeedPage } from './pages/FeedPage';
 // Company Pages
 import { CompanyProfilePage } from './pages/CompanyProfilePage';
 import { CompanyEditPage } from './pages/CompanyEditPage';
+import { CompanyApplicationManagerPage } from './pages/CompanyApplicationManagerPage';
+
+// Chat Pages
+import { ChatRoomsPage } from './pages/ChatRoomsPage';
+import { ChatWindowPage } from './pages/ChatWindowPage';
 
 import { AuthProvider } from './context/AuthProvider';
 import { Outlet } from 'react-router';
@@ -75,11 +80,14 @@ export const router = createBrowserRouter([
 
           // Standalone detail routes (no bottom nav, has back button)
           { path: '/job/:jobId', element: <JobDetailPage /> },
+          { path: '/job/:jobId/applicants', element: <CompanyApplicationManagerPage /> },
           { path: '/course/:courseId', element: <CourseDetailPage /> },
           { path: '/course/:courseId/chat', element: <CourseChatPage /> },
           { path: '/post-job', element: <PostJobPage /> },
           { path: '/company/:companyId', element: <CompanyProfilePage /> },
           { path: '/company/:companyId/edit', element: <CompanyEditPage /> },
+          { path: '/chats', element: <ChatRoomsPage /> },
+          { path: '/chats/:roomId', element: <ChatWindowPage /> },
 
           // Course Proposal
           { path: '/trainer/propose-course', element: <CourseProposalPage /> },

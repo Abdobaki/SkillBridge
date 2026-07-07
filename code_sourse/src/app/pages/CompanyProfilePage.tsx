@@ -157,9 +157,22 @@ export function CompanyProfilePage() {
                         <span className="text-primary font-medium">{job.salary || 'Salary Undisclosed'}</span>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-[9px] rounded-full uppercase">
-                      {job.type}
-                    </Badge>
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <Badge variant="outline" className="text-[9px] rounded-full uppercase">
+                        {job.type}
+                      </Badge>
+                      {isManager && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/job/${job.id}/applicants`);
+                          }}
+                          className="text-[10px] font-bold text-primary hover:underline px-2.5 py-1 bg-primary/5 rounded-full border border-primary/10"
+                        >
+                          Applicants
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

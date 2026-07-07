@@ -21,6 +21,41 @@ export function AppliedScreen({
 }: AppliedScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
+  const renderStatusBadge = (status: string) => {
+    switch (status) {
+      case 'shortlisted':
+        return (
+          <Badge variant="secondary" className="bg-purple-500/10 text-purple-500 border-0 ml-2 shrink-0 text-[10px]">
+            Shortlisted
+          </Badge>
+        );
+      case 'interview_scheduled':
+        return (
+          <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-0 ml-2 shrink-0 text-[10px]">
+            Interviewing
+          </Badge>
+        );
+      case 'accepted':
+        return (
+          <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 border-0 ml-2 shrink-0 text-[10px]">
+            Offered
+          </Badge>
+        );
+      case 'rejected':
+        return (
+          <Badge variant="secondary" className="bg-rose-500/10 text-rose-500 border-0 ml-2 shrink-0 text-[10px]">
+            Archived
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-0 ml-2 shrink-0 text-[10px]">
+            Applied
+          </Badge>
+        );
+    }
+  };
+
   const filteredJobs = appliedJobs.filter((job) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -101,10 +136,7 @@ export function AppliedScreen({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between mb-1">
                         <h4 className="text-foreground line-clamp-1 flex-1">{job.title}</h4>
-                        <Badge variant="secondary" className="bg-accent/10 text-accent border-0 ml-2 shrink-0">
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                          Applied
-                        </Badge>
+                        {renderStatusBadge((job as any).status || 'applied')}
                       </div>
 
                       <p className="text-sm text-muted-foreground mb-2">{job.company}</p>
